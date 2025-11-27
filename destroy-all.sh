@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Script para destruir todos os recursos na ordem correta
-# Versão: 2.0
+# Versão: 3.0
 # Data: 27 de Novembro de 2025
 # Stacks: 00-backend até 05-monitoring
+# Changelog v3.0: Remoção automática de resources órfãos do state (Stack 04, 03, 02)
 
 set -e  # Para em caso de erro
 
@@ -64,38 +65,33 @@ echo ""
 destroy_stack "Stack 05 - Monitoring (Grafana + Prometheus)" "05-monitoring"
 
 # Stack 04: Remover WAF association do state (ALB já foi deletado via kubectl)
-echo "🧹 Stack 04: Removendo WAF association do state..."
+echo "═══════════════════════════════════════════════════════════════════"
+echo "🧹 Stack 04: Limpando state de WAF association órfã..."
+echo "═══════════════════════════════════════════════════════════════════"
 cd "$PROJECT_ROOT/04-security"
-terraform state rm aws_wafv2_web_acl_association.eks_alb 2>/dev/null || echo "  ℹ️  WAF association já removida ou não existe"
+terraform state rm aws_wafv2_web_acl_association.alb 2>/dev/null && echo "  ✅ WAF association removida do state" || echo "  ℹ️  WAF association já removida ou não existe"
+terraform state rm data.aws_lb.eks 2>/dev/null && echo "  ✅ Data source ALB removido do state" || echo "  ℹ️  Data source já removido"
 echo ""
 
 destroy_stack "Stack 04 - Security (WAF)" "04-security"
 
-# Stack 03: Garantir que helm/values.yml existe
-echo "🧹 Stack 03: Verificando helm/values.yml..."
+# Stack 03: Remover helm release do state (pode estar órfão se cluster foi destruído)
+echo "═══════════════════════════════════════════════════════════════════"
+echo "🧹 Stack 03: Limpando state de Karpenter helm release órfão..."
+echo "═══════════════════════════════════════════════════════════════════"
 cd "$PROJECT_ROOT/03-karpenter-auto-scaling"
-if [ ! -f "helm/values.yml" ]; then
-    echo "  ⚠️  helm/values.yml não encontrado, criando versão mínima..."
-    mkdir -p helm
-    cat > helm/values.yml << 'EOFVALUES'
-serviceAccount:
-  name: karpenter
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::620958830769:role/karpenter-controller-role
-EOFVALUES
-    echo "  ✅ helm/values.yml criado"
-else
-    echo "  ✅ helm/values.yml existe"
-fi
+terraform state rm helm_release.karpenter 2>/dev/null && echo "  ✅ Karpenter helm release removido do state" || echo "  ℹ️  Helm release já removido ou não existe"
 echo ""
 
 destroy_stack "Stack 03 - Karpenter (Auto-scaling)" "03-karpenter-auto-scaling"
 
 # Stack 02: Remover helm releases do state (cluster inacessível após addons destruídos)
-echo "🧹 Stack 02: Removendo helm releases do state..."
+echo "═══════════════════════════════════════════════════════════════════"
+echo "🧹 Stack 02: Limpando state de helm releases órfãos..."
+echo "═══════════════════════════════════════════════════════════════════"
 cd "$PROJECT_ROOT/02-eks-cluster"
-terraform state rm helm_release.load_balancer_controller 2>/dev/null || echo "  ℹ️  ALB Controller helm release já removido ou não existe"
-terraform state rm helm_release.external_dns 2>/dev/null || echo "  ℹ️  External DNS helm release já removido ou não existe"
+terraform state rm helm_release.load_balancer_controller 2>/dev/null && echo "  ✅ ALB Controller helm release removido do state" || echo "  ℹ️  ALB Controller já removido ou não existe"
+terraform state rm helm_release.external_dns 2>/dev/null && echo "  ✅ External DNS helm release removido do state" || echo "  ℹ️  External DNS já removido ou não existe"
 echo ""
 
 destroy_stack "Stack 02 - EKS Cluster" "02-eks-cluster"
@@ -110,6 +106,38 @@ read -p "⚠️  Destruir backend também? Isso removerá o state remoto! (s/N):
 
 if [[ $destroy_backend =~ ^[Ss]$ ]]; then
     cd "$PROJECT_ROOT/00-backend"
+    
+    # Obter nome do bucket do terraform
+    BUCKET_NAME=$(terraform output -raw s3_bucket_name 2>/dev/null || echo "eks-devopsproject-state-files-620958830769")
+    
+    echo "🧹 Esvaziando bucket S3: $BUCKET_NAME"
+    
+    # Deletar todas as versões de objetos
+    echo "  → Removendo versões de objetos..."
+    aws s3api delete-objects \
+        --bucket "$BUCKET_NAME" \
+        --delete "$(aws s3api list-object-versions \
+            --bucket "$BUCKET_NAME" \
+            --profile terraform \
+            --output json \
+            --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' 2>/dev/null)" \
+        --profile terraform &>/dev/null || true
+    
+    # Deletar todos os delete markers
+    echo "  → Removendo delete markers..."
+    aws s3api delete-objects \
+        --bucket "$BUCKET_NAME" \
+        --delete "$(aws s3api list-object-versions \
+            --bucket "$BUCKET_NAME" \
+            --profile terraform \
+            --output json \
+            --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' 2>/dev/null)" \
+        --profile terraform &>/dev/null || true
+    
+    echo "  ✅ Bucket esvaziado"
+    echo ""
+    
+    # Agora destruir o backend
     terraform destroy -auto-approve
     echo "✅ Stack 00 - Backend destruído"
 else
