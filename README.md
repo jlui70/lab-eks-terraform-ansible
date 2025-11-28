@@ -26,6 +26,13 @@ Antes de iniciar o deployment, certifique-se de ter:
 - **Conta AWS Paid Plan** ou créditos suficientes (Free Tier não suporta instâncias t3.medium)
 
 > ⚠️ **IMPORTANTE:** O projeto utiliza instâncias **t3.medium** para os worker nodes. Contas AWS Free Tier são limitadas a t3.micro/t3.small. Certifique-se de ter upgrade para Paid Plan ou créditos AWS disponíveis.
+>
+> 💰 **ESTIMATIVA DE CUSTO PARA LABORATÓRIO:**
+> - **30 minutos de teste:** ~$0.50 USD
+> - **2 horas completas (deploy + validação):** ~$2.00 USD
+> - **8 horas (dia de estudo):** ~$8.00 USD
+> 
+> **💡 DICA:** Execute `terraform destroy` imediatamente após os testes para evitar cobranças contínuas. O custo de ~$280/mês mencionado abaixo é apenas se você mantiver a infraestrutura rodando 24/7.
 
 ---
 
@@ -255,6 +262,16 @@ Após o deploy do Stack 02, configure o kubectl para acessar o cluster:
 
 ```bash
 aws eks update-kubeconfig \
+    --name <CLUSTER_NAME> \
+    --region us-east-1 \
+    --profile terraform
+```
+
+> 📝 **Nota:** Substitua `<CLUSTER_NAME>` pelo nome do seu cluster. Se você não alterou as variáveis do Terraform, o nome padrão é `eks-devopsproject-cluster`.
+
+**Exemplo:**
+```bash
+aws eks update-kubeconfig \
     --name eks-devopsproject-cluster \
     --region us-east-1 \
     --profile terraform
@@ -335,7 +352,7 @@ kubectl apply -f ../02-eks-cluster/samples/ingress-sample-deployment.yml
 **Aguarde o ALB ser provisionado (~2-3 minutos):**
 
 ```bash
-kubectl get ingress eks-devopsproject-ingress -w
+kubectl get ingress eks-devopsproject-ingress -n sample-app -w
 ```
 
 Quando aparecer o endereço do ALB na coluna `ADDRESS`, pressione Ctrl+C.
@@ -343,7 +360,7 @@ Quando aparecer o endereço do ALB na coluna `ADDRESS`, pressione Ctrl+C.
 **Teste o ALB (aguarde DNS propagar ~60-90 segundos):**
 
 ```bash
-ALB_URL=$(kubectl get ingress eks-devopsproject-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+ALB_URL=$(kubectl get ingress eks-devopsproject-ingress -n sample-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 curl -I http://$ALB_URL
 ```
 
@@ -353,33 +370,58 @@ curl -I http://$ALB_URL
 
 #### Passo 4.3: Associar WAF ao ALB
 
-Agora que o ALB existe, podemos associar o WAF. O projeto vem com os arquivos de associação **desabilitados** (sufixo `.disabled`).
+Agora que o ALB existe, associe o WAF adicionando uma anotação ao Ingress.
 
-**Renomeie os arquivos para habilitá-los:**
-
-```bash
-cd 04-security
-mv data.alb.tf.disabled data.alb.tf 2>/dev/null || echo "Arquivo já renomeado"
-mv waf.alb.association.tf.disabled waf.alb.association.tf 2>/dev/null || echo "Arquivo já renomeado"
-```
-
-**Aplique novamente o Terraform:**
+**Obtenha o ARN do WAF:**
 
 ```bash
-terraform apply -auto-approve
+cd ../04-security
+WAF_ARN=$(terraform state show aws_wafv2_web_acl.this | grep "arn " | awk '{print $3}' | tr -d '"')
+echo "WAF ARN: $WAF_ARN"
 ```
 
-**Recursos criados:** 1 (WAF Web ACL Association)
+**Adicione a anotação do WAF ao Ingress:**
 
-**⏱️ Tempo estimado:** 30 segundos
+```bash
+kubectl annotate ingress eks-devopsproject-ingress \
+  -n sample-app \
+  alb.ingress.kubernetes.io/wafv2-acl-arn="$WAF_ARN" \
+  --overwrite
+```
+
+**Aguarde o ALB Controller processar (~30-60 segundos):**
+
+```bash
+kubectl get ingress eks-devopsproject-ingress -n sample-app -w
+```
+
+Quando a coluna `ADDRESS` aparecer novamente (pode piscar), pressione Ctrl+C.
 
 **✅ Validação:**
 
+Verifique se a associação foi criada:
+
 ```bash
-terraform state show aws_wafv2_web_acl_association.alb
+# Obter ARN do ALB
+ALB_ARN=$(aws elbv2 describe-load-balancers \
+  --query "LoadBalancers[?contains(LoadBalancerName, 'k8s-sampleap')].LoadBalancerArn" \
+  --output text --profile terraform)
+
+# Verificar associação WAF
+aws wafv2 get-web-acl-for-resource \
+  --resource-arn "$ALB_ARN" \
+  --region us-east-1 \
+  --profile terraform \
+  --query 'WebACL.Name' \
+  --output text
 ```
 
-Deve mostrar o ARN do WAF associado ao ARN do ALB.
+**Esperado:** `waf-eks-devopsproject-webacl`
+
+Ou verifique no AWS Console:
+1. Acesse: https://console.aws.amazon.com/wafv2/home?region=us-east-1
+2. Clique em **Web ACLs** → `waf-eks-devopsproject-webacl`
+3. Na aba **Associated AWS resources**, você verá o ALB listado
 
 ---
 
@@ -697,9 +739,12 @@ Prometheus Endpoint: https://aps-workspaces.us-east-1.amazonaws.com/workspaces/w
 ### Passo 5: Alterar Permissão para ADMIN
 
 1. Na mesma aba **"Authentication"**, localize o usuário na tabela
-2. Clique nos 3 pontinhos **[...]** ou **"Edit"** na linha do usuário
-3. Mude de **VIEWER** para **ADMIN**
-4. Clique em **"Save changes"**
+2. Selecione o usuário (marque o checkbox ao lado do nome)
+3. Clique no botão **"Actions"** (no topo da tabela)
+4. Selecione **"Make admin"**
+5. Confirme a alteração
+
+> 📝 **Nota:** A interface AWS foi atualizada. Se você ainda vê os 3 pontinhos **[...]**, use essa opção. Caso contrário, use o botão **Actions** → **Make admin**.
 
 ### Passo 6: Acessar o Grafana
 
@@ -748,8 +793,9 @@ terraform output -raw prometheus_workspace_endpoint
 2. Clique em **"New"** → **"Import"**
 3. Digite o ID: **1860**
 4. Clique em **"Load"**
-5. Em **"Prometheus"**, selecione: `Prometheus` (data source criado)
-6. Clique em **"Import"**
+5. Clique em **"Import"** (o data source Prometheus será selecionado automaticamente)
+
+> 📝 **Nota:** Para o dashboard 1860 (Node Exporter Full), após clicar em "Load", o Grafana detecta automaticamente o data source Prometheus configurado no Passo 7. Não é necessário selecionar manualmente.
 
 🎉 **Pronto!** Agora você tem:
 - ✅ Dashboard Node Exporter Full funcionando
