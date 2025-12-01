@@ -27,7 +27,8 @@ ansible --version
 ### **1.2. Criar Estrutura de Diretórios**
 
 ```bash
-cd /home/luiz7/Projects/lab-eks-terraform-ansible
+# Navegue até a raiz do projeto clonado
+cd lab-eks-terraform-ansible
 
 # Criar estrutura
 mkdir -p ansible/{inventory,playbooks,roles,group_vars/{dev,staging,prod}}
@@ -440,7 +441,7 @@ ansible-playbook playbooks/01-configure-grafana.yml
   vars:
     aws_region: "us-east-1"
     cluster_name: "eks-devopsproject-cluster"
-    kubeconfig_path: "~/.kube/config"
+    kubeconfig_path: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config') }}"
   
   pre_tasks:
     - name: Verificar kubectl está instalado
@@ -693,7 +694,7 @@ all:
   vars:
     env: dev
     aws_region: us-east-1
-    aws_account_id: "YOUR_ACCOUNT_ID"
+    aws_account_id: "123456789012"  # Substitua pelo seu Account ID
     cluster_name: "eks-devopsproject-cluster"
     
   hosts:
@@ -708,7 +709,7 @@ all:
   vars:
     env: prod
     aws_region: us-east-1
-    aws_account_id: "YOUR_ACCOUNT_ID"
+    aws_account_id: "123456789012"  # Substitua pelo seu Account ID
     cluster_name: "eks-production-cluster"
     
     # Configurações específicas de produção
@@ -759,7 +760,7 @@ ansible-playbook -i inventory/prod.yml playbooks/01-configure-grafana.yml
 ### **Cenário 1: Deploy Fresh (do zero)**
 ```bash
 # 1. Clone do repositório
-git clone https://github.com/your-org/lab-eks-terraform-ansible
+git clone https://github.com/jlui70/lab-eks-terraform-ansible
 cd lab-eks-terraform-ansible
 
 # 2. Configurar AWS credentials

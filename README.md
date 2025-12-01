@@ -30,16 +30,6 @@ Este projeto foi expandido com **documentação completa** para integração com
    - Setup passo a passo
    - Exemplos práticos
 
-3. **[RESUMO-EXECUTIVO-ALUNOS.md](./RESUMO-EXECUTIVO-ALUNOS.md)**  
-   - Material didático para estudantes
-   - Conceitos fundamentais (Terraform vs Ansible)
-   - Casos de uso reais
-
-4. **[ROTEIRO-APRESENTACAO-AULA.md](./ROTEIRO-APRESENTACAO-AULA.md)**  
-   - Roteiro de aula completo (90 minutos)
-   - Demos práticas
-   - Exercícios hands-on
-
 5. **[INDICE-DOCUMENTACAO.md](./INDICE-DOCUMENTACAO.md)**  
    - Índice geral de toda documentação
    - Fluxo de leitura recomendado
@@ -1288,7 +1278,7 @@ kubectl set env daemonset aws-node -n kube-system \
 
 ```bash
 # 1. Destruir stacks (ordem inversa)
-cd /home/luiz7/Projects/eks-express-iac-nova-conta
+# Certifique-se de estar na raiz do projeto
 cd ./05-monitoring && terraform destroy -auto-approve
 cd ../04-security && terraform destroy -auto-approve
 cd ../03-karpenter-auto-scaling && terraform destroy -auto-approve
