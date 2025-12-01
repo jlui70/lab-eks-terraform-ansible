@@ -1025,16 +1025,124 @@ terraform init -upgrade
 
 ---
 
+### Erro 8: "VPC has dependencies and cannot be deleted" (Destroy)
+
+**Causa:** ENIs (Network Interfaces) do Prometheus Scraper ainda anexadas à VPC.
+
+**Sintomas:**
+- `terraform destroy` da Stack 01 falha com erro de VPC dependente
+- Subnets não podem ser deletadas
+- Após destroy do Stack 05, VPC permanece com recursos
+
+**Explicação Técnica:**
+O Prometheus Scraper cria ENIs gerenciadas pela AWS (tipo `amp_collector`) nas subnets privadas. Quando você executa `terraform destroy`, o Terraform solicita a deleção do scraper, mas as ENIs levam **5-10 minutos** para serem liberadas automaticamente pela AWS. Durante este período, a VPC e subnets não podem ser deletadas.
+
+**Solução Automática (destroy-all.sh):**
+O script `destroy-all.sh` JÁ TEM proteção automática que aguarda até 10 minutos pelas ENIs. **Simplesmente execute:**
+```bash
+./destroy-all.sh
+```
+
+**Solução Manual (se destroy-all.sh falhar):**
+```bash
+# 1. Verificar se há ENIs do Prometheus ainda anexadas
+aws ec2 describe-network-interfaces \
+  --filters "Name=interface-type,Values=amp_collector" \
+  --profile terraform
+
+# 2. Se ainda houver ENIs, aguardar 5-10 minutos
+
+# 3. Executar script de limpeza final
+./cleanup-vpc-final.sh
+```
+
+**Prevenção:**
+- ✅ Sempre use `./destroy-all.sh` ao invés de destroy manual
+- ✅ Execute `./pre-destroy-check.sh` antes para ver warnings
+- ✅ NUNCA force delete ENIs do tipo `amp_collector` (são gerenciadas pela AWS)
+
+**Por que acontece:**
+- AWS Prometheus Scraper (AMP) cria ENIs gerenciadas nas subnets do EKS
+- Estas ENIs são "owned" pela AWS (`InstanceOwnerId: amazon-aws`)
+- Quando você deleta o scraper, a AWS precisa de tempo para cleanup interno
+- O Terraform não espera automaticamente, causando falha no destroy da VPC
+
+**Como o código foi corrigido:**
+1. **`05-monitoring/prometheus.scraper.tf`**: Adicionado lifecycle hook
+2. **`destroy-all.sh`**: Adicionado wait loop de 10min verificando ENIs
+3. **`cleanup-vpc-final.sh`**: Script de fallback caso ainda falhe
+
+---
+
+### Erro 9: "ALB still exists, cannot delete Security Groups" (Destroy)
+
+**Causa:** Load Balancer criado por Ingress não foi deletado antes do destroy.
+
+**Solução:**
+O `destroy-all.sh` já deleta recursos Kubernetes primeiro. Se ainda encontrar:
+```bash
+# Deletar ALBs manualmente
+kubectl delete ingress --all --all-namespaces
+kubectl delete namespace ecommerce
+kubectl delete namespace sample-app
+
+# Aguardar 45s para ALB ser removido
+sleep 45
+
+# Tentar destroy novamente
+cd 02-eks-cluster
+terraform destroy -auto-approve
+```
+
+---
+
 ## 🗑️ Destruir Infraestrutura
 
-Para destruir os recursos provisionados, siga **EXATAMENTE** esta ordem para evitar erros de dependência:
+### Método 1: Automático (RECOMENDADO) 🚀
 
-### Ordem de Destruição
+**Pré-validação (Opcional):**
+```bash
+# Verifica recursos que podem causar problemas antes do destroy
+./pre-destroy-check.sh
+```
+
+**Destroy Completo:**
+```bash
+# Destrói TODAS as stacks automaticamente na ordem correta
+./destroy-all.sh
+```
+
+**O script faz automaticamente:**
+1. ✅ Deleta recursos Kubernetes (namespaces, Ingress → ALB)
+2. ✅ Aguarda ALBs serem removidos pela AWS
+3. ✅ Destrói Stack 05 (Monitoring: Grafana + Prometheus)
+4. ✅ **PROTEÇÃO AUTOMÁTICA:** Aguarda até 10min para ENIs do Prometheus serem liberadas
+5. ✅ Remove recursos órfãos do state (WAF, Helm releases)
+6. ✅ Destrói Stack 04 → 03 → 02 → 01
+7. ✅ Pergunta se quer destruir Stack 00 (backend)
+
+**⏱️ Tempo total:** ~15-25 minutos (inclui espera de ENIs)
+
+**Se VPC não deletar (raro):**
+```bash
+# Script de emergência que limpa ENIs órfãs e finaliza VPC
+./cleanup-vpc-final.sh
+```
+
+---
+
+### Método 2: Manual (Para Troubleshooting)
+
+Para destruir os recursos manualmente, siga **EXATAMENTE** esta ordem:
 
 ```bash
 # Stack 05 - Monitoring
 cd ./05-monitoring
 terraform destroy -auto-approve
+
+# ⚠️ CRÍTICO: Aguardar ENIs do Prometheus serem liberadas (5-10 min)
+# Verificar se ENIs ainda existem:
+aws ec2 describe-network-interfaces --filters "Name=interface-type,Values=amp_collector" --profile terraform
 
 # Stack 04 - Security (WAF)
 cd ../04-security
@@ -1044,16 +1152,8 @@ terraform destroy -auto-approve
 cd ../03-karpenter-auto-scaling
 terraform destroy -auto-approve
 
-# Stack 02 - EKS Cluster (ORDEM IMPORTANTE)
+# Stack 02 - EKS Cluster
 cd ../02-eks-cluster
-
-# Primeiro: Destruir External DNS
-terraform destroy -target=helm_release.external_dns -auto-approve
-
-# Segundo: Destruir ALB Controller
-terraform destroy -target=helm_release.load_balancer_controller -auto-approve
-
-# Terceiro: Destruir resto do cluster
 terraform destroy -auto-approve
 
 # Stack 01 - Networking
@@ -1067,11 +1167,11 @@ terraform destroy -auto-approve
 
 **⚠️ ATENÇÃO:** 
 - **Não destrua** o Stack 00 se quiser manter o histórico de state do Terraform
-- Sempre siga a ordem inversa do deployment
+- **CRÍTICO:** Sempre aguarde ENIs do Prometheus serem liberadas antes de destruir VPC (Stack 01)
 - Aguarde cada comando concluir antes de executar o próximo
-- Se houver erro, verifique se há recursos dependentes (ex: ALBs criados por Ingress) e delete-os manualmente
+- Se houver erro, verifique seção **Troubleshooting de Destroy** abaixo
 
-**⏱️ Tempo total de destruição:** ~15-20 minutos
+**⏱️ Tempo total de destruição:** ~15-25 minutos
 
 ---
 

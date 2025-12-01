@@ -88,6 +88,46 @@ echo ""
 
 destroy_stack "Stack 05 - Monitoring (Grafana + Prometheus)" "05-monitoring"
 
+# CRÍTICO: Aguardar ENIs do Prometheus Scraper serem liberadas pela AWS
+echo "═══════════════════════════════════════════════════════════════════"
+echo "⏳ Aguardando liberação de ENIs do Prometheus Scraper..."
+echo "═══════════════════════════════════════════════════════════════════"
+echo "ℹ️  O Prometheus Scraper cria ENIs gerenciadas que levam ~5min para"
+echo "   serem liberadas pela AWS após o terraform destroy."
+echo ""
+
+MAX_WAIT=600  # 10 minutos
+INTERVAL=15   # Verificar a cada 15 segundos
+elapsed=0
+
+while [ $elapsed -lt $MAX_WAIT ]; do
+    # Verificar ENIs com tipo amp_collector (Prometheus)
+    ENI_COUNT=$(aws ec2 describe-network-interfaces \
+        --filters "Name=interface-type,Values=amp_collector" \
+        --query 'length(NetworkInterfaces)' \
+        --output text \
+        --profile terraform 2>/dev/null || echo "0")
+    
+    if [ "$ENI_COUNT" = "0" ]; then
+        echo "✅ Todas as ENIs do Prometheus foram liberadas!"
+        break
+    fi
+    
+    echo "  ⏳ Ainda há $ENI_COUNT ENI(s) do Prometheus... aguardando ${elapsed}s/${MAX_WAIT}s"
+    sleep $INTERVAL
+    elapsed=$((elapsed + INTERVAL))
+done
+
+if [ $elapsed -ge $MAX_WAIT ]; then
+    echo "⚠️  TIMEOUT: ENIs ainda não foram liberadas após ${MAX_WAIT}s"
+    echo "   Prosseguindo mesmo assim (pode causar erro na Stack 01 - VPC)"
+    echo "   Se VPC não deletar, aguarde mais 5min e execute:"
+    echo "   → ./cleanup-vpc-final.sh"
+else
+    echo "✅ Pronto para deletar recursos de rede!"
+fi
+echo ""
+
 # Stack 04: Remover WAF association do state (ALB já foi deletado via kubectl)
 echo "═══════════════════════════════════════════════════════════════════"
 echo "🧹 Stack 04: Limpando state de WAF association órfã..."
