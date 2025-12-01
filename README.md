@@ -39,7 +39,21 @@ Este projeto foi expandido com **documentação completa** para integração com
 | Validação cluster | 15 min (manual) | 1 min (automático) | **93%** |
 | **3 ambientes completos** | **~10 horas** | **~2.5 horas** | **75%** |
 
----
+__name__="up", instance="10.0.0.100:61678", job="pod_exporter"}
+{__name__="up", instance="10.0.0.100:80", job="pod_exporter"}
+{__name__="up", instance="10.0.0.100:8162", job="pod_exporter"}
+{__name__="up", instance="10.0.0.100:9100", job="pod_exporter"}
+{__name__="up", instance="10.0.0.106:3003", job="pod_exporter"}
+{__name__="up", instance="10.0.0.107:53", job="pod_exporter"}
+{__name__="up", instance="10.0.0.107:9153", job="pod_exporter"}
+{__name__="up", instance="10.0.0.109:4000", job="pod_exporter"}
+{__name__="up", instance="10.0.0.110:8080", job="pod_exporter"}
+{__name__="up", instance="10.0.0.111:80", job="pod_exporter"}
+{__name__="up", instance="10.0.0.113:8080", job="pod_exporter"}
+{__name__="up", instance="10.0.0.113:8081", job="pod_exporter"}
+{__name__="up", instance="10.0.0.115:9090", job="pod_exporter"}
+{__name__="up", instance="10.0.0.116:10251", job="pod_exporter"}
+{__name__="up", instance="10.0.0.117:80", job="pod_exporter"}---
 
 ## 🚀 Fluxo de Deployment Recomendado
 
@@ -1475,42 +1489,68 @@ Se encontrar problemas durante o deployment:
 
 ---
 
-## ⚠️ PROBLEMA COMUM: Esgotamento de IPs na Subnet
+## ✅ CAPACIDADE DE IPs OTIMIZADA
 
-### 🔴 Sintoma
+### 📊 Configuração Atual
 
-Após o deploy completo, você pode receber um ou mais destes erros/avisos:
+Este projeto já está **otimizado automaticamente** para evitar problemas de esgotamento de IPs:
 
-**1. Alerta no Console EKS:**
-```
-InsufficientFreeAddresses
-One or more of the subnets associated with your cluster does not have enough 
-available IP addresses for Amazon EKS to perform cluster management operations. 
-Free up addresses in the subnet(s), or associate different subnets to your 
-cluster using the Amazon EKS update-cluster-config API.
+**Subnets Privadas:**
+- **CIDR:** /26 (ao invés de /27)
+- **Capacidade:** 59 IPs úteis por subnet (vs 27 anteriormente)
+- **Total:** ~118 IPs disponíveis para workloads
+
+**AWS VPC CNI Otimizado:**
+- `WARM_ENI_TARGET=0` - Não pré-aloca ENIs desnecessárias
+- `WARM_IP_TARGET=5` - Mantém apenas 5 IPs warm por node
+- `MINIMUM_IP_TARGET=10` - Garante mínimo de 10 IPs por node
+- **Economia:** ~15-20% de IPs comparado com configuração padrão
+
+### 🎯 Capacidade de Workload
+
+Com esta configuração, você pode executar:
+- ✅ **5-8 nodes t3.medium** confortavelmente
+- ✅ **40-60 pods** distribuídos no cluster
+- ✅ **Monitoramento completo** (Prometheus + Grafana + Node Exporter)
+- ✅ **Aplicação e-commerce** (7 microserviços)
+- ✅ **Karpenter auto-scaling** com margem para crescimento
+
+### 🔍 Monitoramento de IPs (Opcional)
+
+Se quiser verificar quantos IPs estão disponíveis:
+
+```bash
+aws ec2 describe-subnets \
+    --filters "Name=tag:Name,Values=*private-subnet*" \
+    --query 'Subnets[].[Tags[?Key==`Name`].Value|[0],CidrBlock,AvailableIpAddressCount]' \
+    --output table \
+    --profile terraform
 ```
 
-**2. Erro ao provisionar instâncias EC2:**
-```
-InsufficientFreeAddresses - We currently do not have sufficient IP addresses 
-in the subnet subnet-xxxxxxxxx (10.0.0.96/27) to launch the instance.
-```
+**Valores esperados após deploy:**
+- `private-subnet-us-east-1a`: ~50-55 IPs disponíveis
+- `private-subnet-us-east-1b`: ~50-55 IPs disponíveis
 
-**3. Pods travados em ContainerCreating:**
-```
-Failed to create pod sandbox: plugin type="aws-cni" failed (add): 
-failed to assign an IP address to container
-```
-
-**Causa Raiz:** AWS VPC CNI com configuração padrão pré-aloca ENIs com até 6 IPs secundários por node, consumindo rapidamente os 27 IPs úteis de uma subnet /27.
+> 💡 **Nota:** Se você precisar expandir ainda mais (produção de grande escala), considere usar subnets /25 (123 IPs úteis) editando `01-networking/variables.tf` antes do primeiro deploy.
 
 ---
 
-### 📊 Análise do Problema
+## ⚠️ TROUBLESHOOTING: Problemas Históricos Resolvidos
 
-#### Diagnóstico Rápido
+### Esgotamento de IPs nas Subnets (RESOLVIDO ✅)
 
-Verifique quantos IPs estão disponíveis na subnet problemática (normalmente `private-subnet-us-east-1b`):
+**Versões antigas** deste projeto (antes de 01/12/2025) usavam subnets /27 (27 IPs úteis), o que causava esgotamento em ambientes com muitos pods.
+
+**Solução aplicada automaticamente:**
+- ✅ Subnets expandidas para /26 (59 IPs úteis)
+- ✅ AWS VPC CNI otimizado por padrão
+- ✅ Sem necessidade de configuração manual
+
+Se você ainda encontrar o erro `InsufficientFreeAddresses`, verifique se está usando a versão atualizada:
+
+#### Diagnóstico Rápido (apenas para troubleshooting)
+
+Verifique quantos IPs estão disponíveis:
 
 ```bash
 # 1. Listar todas as subnets privadas
@@ -1542,13 +1582,29 @@ aws ec2 describe-network-interfaces \
 
 ---
 
-### 🛠️ Opções de Solução
+```bash
+aws ec2 describe-subnets \
+    --filters "Name=tag:Name,Values=*private-subnet*" \
+    --query 'Subnets[].[Tags[?Key==`Name`].Value|[0],CidrBlock,AvailableIpAddressCount]' \
+    --output table \
+    --profile terraform
+```
 
-Você tem **3 opções** para resolver este problema. Escolha baseado no seu cenário:
+**Valores esperados:**
+- ✅ **Saudável:** AvailableIpAddressCount > 40 (com subnets /26)
+- ⚠️ **Atenção:** AvailableIpAddressCount < 20 (subnet sob pressão)
+- 🔴 **Crítico:** AvailableIpAddressCount < 10 (precisa expansão urgente)
+
+**Se você ainda usar subnets /27 antigas:**
+Edite `01-networking/variables.tf` e mude os CIDRs para:
+- `10.0.1.0/26` e `10.0.1.64/26` (staging - 59 IPs cada)
+- `10.0.2.0/25` e `10.0.2.128/25` (produção - 123 IPs cada)
+
+Depois execute `./rebuild-all.sh` para recriar a infraestrutura.
 
 ---
 
-#### **OPÇÃO 1: Otimização AWS VPC CNI (RECOMENDADA)** ⭐
+## 📋 Checklist de Validação Pós-Deploy
 
 **Quando usar:** Ambiente de desenvolvimento/testes, subnet /27, poucos nodes (2-4)
 
@@ -1734,15 +1790,14 @@ cd ./01-networking && terraform apply -auto-approve
 
 ---
 
-### 📋 Checklist de Validação Pós-Solução
-
 Após aplicar qualquer opção, valide:
 
 ```bash
-# ✅ 1. Subnet tem IPs suficientes (>10)
+# ✅ 1. Subnet tem IPs suficientes (>40 com /26)
 aws ec2 describe-subnets \
-    --subnet-ids subnet-xxxxxxxxx \
-    --query 'Subnets[0].AvailableIpAddressCount' \
+    --filters "Name=tag:Name,Values=*private-subnet*" \
+    --query 'Subnets[].[Tags[?Key==`Name`].Value|[0],CidrBlock,AvailableIpAddressCount]' \
+    --output table \
     --profile terraform
 
 # ✅ 2. Todos os nodes estão Ready
@@ -1750,82 +1805,6 @@ kubectl get nodes
 
 # ✅ 3. Todos os pods estão Running (nenhum ContainerCreating)
 kubectl get pods -A | grep -v Running | grep -v Completed
-
-# ✅ 4. CNI está configurado corretamente (se usou Opção 1)
-kubectl get daemonset aws-node -n kube-system \
-    -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="WARM_ENI_TARGET")].value}' && echo
-
-# ✅ 5. Não há alertas AWS sobre IPs
-# Verificar CloudWatch ou AWS Personal Health Dashboard
-```
-
----
-
-### 💡 Lições Aprendidas e Melhores Práticas
-
-1. **Dimensionamento de Subnets:**
-   - Dev: /27 (27 IPs) - Suficiente para 2-3 nodes + CNI otimizado
-   - Staging: /26 (59 IPs) - Suporta 5-8 nodes confortavelmente
-   - Produção: /25 (123 IPs) - Recomendado para escalabilidade
-
-2. **Monitoramento Proativo:**
-   ```bash
-   # Criar alarme CloudWatch para IPs < 10
-   aws cloudwatch put-metric-alarm \
-       --alarm-name subnet-low-ips \
-       --metric-name AvailableIpAddressCount \
-       --namespace AWS/EC2 \
-       --statistic Average \
-       --period 300 \
-       --evaluation-periods 1 \
-       --threshold 10 \
-       --comparison-operator LessThanThreshold \
-       --profile terraform
-   ```
-
-3. **Otimização CNI como Padrão:**
-   - Sempre aplique Opção 1 (CNI otimizado) **mesmo** com subnets /26 ou /25
-   - Reduz desperdício e aumenta eficiência em qualquer cenário
-
-4. **Planejamento de Capacidade:**
-   - Calcule: `(Nodes × 10 IPs/node) + 5 IPs reserva`
-   - Exemplo: 5 nodes = mínimo 55 IPs = subnet /26
-
----
-
-### 🔍 Troubleshooting Adicional
-
-**Problema:** Após otimizar CNI, IPs não foram liberados
-
-**Solução:**
-```bash
-# 1. Verificar se configuração foi aplicada
-kubectl get daemonset aws-node -n kube-system -o yaml | grep -A3 "WARM_"
-
-# 2. Restart pods aws-node
-kubectl delete pods -n kube-system -l k8s-app=aws-node
-
-# 3. Aguardar 5 minutos e verificar novamente
-sleep 300
-aws ec2 describe-subnets --subnet-ids subnet-xxxxxxxxx \
-    --query 'Subnets[0].AvailableIpAddressCount' \
-    --profile terraform
-
-# 4. Se ainda não liberou, reciclar nodes (Opção 1, passo 4)
-```
-
-**Problema:** Pods ficam `ContainerCreating` mesmo com IPs disponíveis
-
-**Solução:**
-```bash
-# 1. Verificar eventos do pod
-kubectl describe pod <pod-name> -n <namespace>
-
-# 2. Verificar logs do aws-node no node específico
-kubectl logs -n kube-system -l k8s-app=aws-node --all-containers=true | grep ERROR
-
-# 3. Deletar pod para forçar reagendamento
-kubectl delete pod <pod-name> -n <namespace>
 ```
 
 ---

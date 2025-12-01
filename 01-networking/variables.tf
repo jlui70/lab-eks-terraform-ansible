@@ -79,13 +79,13 @@ variable "vpc" {
     }]
     private_subnets = [{
       name                    = "private-subnet-us-east-1a"
-      cidr_block              = "10.0.0.32/27"
+      cidr_block              = "10.0.1.0/26"
       availability_zone       = "us-east-1a"
       map_public_ip_on_launch = false
       },
       {
         name                    = "private-subnet-us-east-1b"
-        cidr_block              = "10.0.0.96/27"
+        cidr_block              = "10.0.1.64/26"
         availability_zone       = "us-east-1b"
         map_public_ip_on_launch = false
     }]
