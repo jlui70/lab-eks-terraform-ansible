@@ -2,7 +2,7 @@ all:
   vars:
     env: dev
     aws_region: us-east-1
-    aws_account_id: "620958830769"
+    aws_account_id: "<YOUR_ACCOUNT>"
     cluster_name: "eks-devopsproject-cluster"
     
   hosts:

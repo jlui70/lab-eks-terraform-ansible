@@ -5,7 +5,7 @@
 serviceAccount:
   name: karpenter
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::620958830769:role/karpenter-controller-role
+    eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/karpenter-controller-role
 
 # Affinity: Força Karpenter a rodar APENAS em nodes do Node Group (não em nodes provisionados por ele mesmo)
 affinity:
