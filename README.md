@@ -20,7 +20,7 @@ Este projeto foi expandido com **documentação completa** para integração com
 
 ### **📚 Documentação Ansible Disponível:**
 
-1. **[ANALISE-ANSIBLE-INTEGRACAO.md](./ANALISE-ANSIBLE-INTEGRACAO.md)**  
+1. **[ANALISE-ANSIBLE-INTEGRACAO.md](.docs/ANALISE-ANSIBLE-INTEGRACAO.md)**  
    - Análise técnica completa das 5 áreas onde Ansible agrega valor
    - Práticas de mercado (Netflix, Spotify, Airbnb)
    - ROI e estimativa de esforço
