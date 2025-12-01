@@ -47,7 +47,7 @@
     - name: "📋 Validar conexão com cluster EKS"
       block:
         - name: Verificar se kubectl está disponível
-          command: kubectl version --client --short
+          command: kubectl version --client -o yaml
           register: kubectl_version
           changed_when: false
           
