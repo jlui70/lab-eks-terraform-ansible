@@ -14,7 +14,7 @@ echo ""
 echo "📋 Ordem: 00-backend → 01-networking → 02-eks → 03-karpenter → 04-security → 05-monitoring"
 echo ""
 
-PROJECT_ROOT="/home/luiz7/Projects/eks-express-iac-nova-conta"
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 # Função para aplicar uma stack
 apply_stack() {
@@ -57,6 +57,10 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════════"
 echo "🔍 Verificando helm/values.yml para Karpenter"
 echo "═══════════════════════════════════════════════════════════════════"
+
+# Obter Account ID dinamicamente
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile terraform 2>/dev/null || aws sts get-caller-identity --query Account --output text)
+
 if [ ! -f "$PROJECT_ROOT/03-karpenter-auto-scaling/helm/values.yml" ] || ! grep -q "affinity" "$PROJECT_ROOT/03-karpenter-auto-scaling/helm/values.yml"; then
     echo "⚠️  helm/values.yml incompleto ou ausente, restaurando versão completa..."
     cat > "$PROJECT_ROOT/03-karpenter-auto-scaling/helm/values.yml" << 'EOFVALUES'
@@ -67,7 +71,7 @@ if [ ! -f "$PROJECT_ROOT/03-karpenter-auto-scaling/helm/values.yml" ] || ! grep 
 serviceAccount:
   name: karpenter
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::620958830769:role/karpenter-controller-role
+    eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/karpenter-controller-role
 
 # Affinity: Força Karpenter a rodar APENAS em nodes do Node Group (não em nodes provisionados por ele mesmo)
 affinity:
@@ -100,7 +104,10 @@ controller:
 nodeSelector:
   eks.amazonaws.com/nodegroup: NODEGROUP_PLACEHOLDER
 EOFVALUES
-    echo "✅ helm/values.yml restaurado"
+    
+    # Substituir <ACCOUNT_ID> pelo Account ID real
+    sed -i "s/<ACCOUNT_ID>/$ACCOUNT_ID/g" "$PROJECT_ROOT/03-karpenter-auto-scaling/helm/values.yml"
+    echo "✅ helm/values.yml restaurado (Account ID: $ACCOUNT_ID)"
 else
     echo "✅ helm/values.yml já existe e está completo"
 fi
