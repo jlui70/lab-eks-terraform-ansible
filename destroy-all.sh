@@ -52,17 +52,32 @@ echo ""
 if kubectl cluster-info &>/dev/null; then
     echo "  ✅ Cluster acessível via kubectl"
     
+    # Deletar namespace ecommerce (aplicação com 7 microserviços + Ingress → ALB)
+    if kubectl get namespace ecommerce &>/dev/null; then
+        echo "  🗑️  Deletando namespace ecommerce (7 microserviços + ALB)..."
+        kubectl delete namespace ecommerce --timeout=90s 2>/dev/null || true
+    fi
+    
     # Deletar recursos do namespace sample-app (se existir)
-    kubectl delete ingress eks-devopsproject-ingress -n sample-app --ignore-not-found=true 2>/dev/null || true
-    kubectl delete service nginx -n sample-app --ignore-not-found=true 2>/dev/null || true
-    kubectl delete deployment nginx -n sample-app --ignore-not-found=true 2>/dev/null || true
-    kubectl delete namespace sample-app --ignore-not-found=true 2>/dev/null || true
+    if kubectl get namespace sample-app &>/dev/null; then
+        echo "  🗑️  Deletando namespace sample-app..."
+        kubectl delete ingress eks-devopsproject-ingress -n sample-app --ignore-not-found=true 2>/dev/null || true
+        kubectl delete service nginx -n sample-app --ignore-not-found=true 2>/dev/null || true
+        kubectl delete deployment nginx -n sample-app --ignore-not-found=true 2>/dev/null || true
+        kubectl delete namespace sample-app --timeout=90s 2>/dev/null || true
+    fi
+    
+    # Deletar kube-state-metrics se existir (instalado manualmente via Helm)
+    if helm list -n kube-system | grep -q kube-state-metrics; then
+        echo "  🗑️  Desinstalando kube-state-metrics..."
+        helm uninstall kube-state-metrics -n kube-system 2>/dev/null || true
+    fi
 
-    echo "  ⏳ Aguardando ALB ser deletado pela AWS (30s)..."
-    sleep 30
+    echo "  ⏳ Aguardando ALB(s) serem deletados pela AWS (45s)..."
+    sleep 45
     echo "  ✅ Recursos Kubernetes deletados"
 else
-    echo "  ⚠️  Cluster inacessível via kubectl (pode já ter sido destruído)"
+    echo "  ⚠️  Cluster inaccessível via kubectl (pode já ter sido destruído)"
     echo "  ℹ️  Prosseguindo com destroy do Terraform (limpará ALB se existir)"
 fi
 echo ""
@@ -186,7 +201,9 @@ echo "║              ✅ DESTRUIÇÃO COMPLETA!                            ║
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
 echo "📊 Recursos destruídos:"
-echo "  ✅ Ingress + ALB (via kubectl)"
+echo "  ✅ Namespace ecommerce + ALB (via kubectl)"
+echo "  ✅ Namespace sample-app (se existia)"
+echo "  ✅ kube-state-metrics (se existia)"
 echo "  ✅ Stack 05: Grafana + Prometheus"
 echo "  ✅ Stack 04: WAF Web ACL + Association"
 echo "  ✅ Stack 03: Karpenter + IAM Roles + Resources"
