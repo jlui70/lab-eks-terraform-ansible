@@ -33,14 +33,14 @@
 # Terraform Role Access
 resource "aws_eks_access_entry" "terraform_role" {
   cluster_name  = aws_eks_cluster.this.name
-  principal_arn = "arn:aws:iam::620958830769:role/terraform-role"
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/terraform-role"
   type          = "STANDARD"
 }
 
 resource "aws_eks_access_policy_association" "terraform_role" {
   cluster_name  = aws_eks_cluster.this.name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = "arn:aws:iam::620958830769:role/terraform-role"
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/terraform-role"
 
   access_scope {
     type = "cluster"

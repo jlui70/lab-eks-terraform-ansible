@@ -256,50 +256,20 @@ find . -type f -name "*.tf" -exec sed -i '' \
 
 ---
 
-### 5.2. Configurar Usuário IAM no locals.tf (Stack 02)
+### 5.2. Verificar EKS Access Configuration (Automático)
 
-**OBRIGATÓRIO:** Edite o arquivo `02-eks-cluster/locals.tf` e substitua o nome do usuário IAM:
+✅ **NENHUMA AÇÃO NECESSÁRIA!** O arquivo `02-eks-cluster/eks.cluster.access.tf` já está configurado corretamente para usar a `terraform-role`.
 
-```hcl
-locals {
-  bash_user_arn    = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/<YOUR_USER>"
-  console_user_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdministratorAccess_xxxxx"
-  eks_oidc_url     = replace(aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
-}
-```
+O Terraform automaticamente:
+- Detecta seu Account ID via `data.aws_caller_identity`
+- Configura access entry para `arn:aws:iam::{ACCOUNT_ID}:role/terraform-role`
+- Garante permissões de Cluster Admin para kubectl funcionar
 
-Substitua:
-- `<YOUR_USER>` pelo nome do usuário IAM criado no passo 1
-- `console_user_arn` pelo ARN do seu SSO role (se aplicável), ou comente a linha se não usar SSO
-
----
-
-### 5.3. Adicionar terraform-role ao EKS Access (Stack 02)
-
-**CRÍTICO:** O arquivo `02-eks-cluster/eks.cluster.access.tf` **deve** conter o access entry para a terraform-role, caso contrário `kubectl` não funcionará:
-
-Verifique se o arquivo contém:
-
-```hcl
-# Terraform Role Access
-resource "aws_eks_access_entry" "terraform_role" {
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = "arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role"
-  type          = "STANDARD"
-}
-
-resource "aws_eks_access_policy_association" "terraform_role" {
-  cluster_name  = aws_eks_cluster.this.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = "arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role"
-
-  access_scope {
-    type = "cluster"
-  }
-}
-```
-
-> ⚠️ **ATENÇÃO:** Sem este access entry, você receberá erro `"the server has asked for the client to provide credentials"` ao tentar usar kubectl.
+> 💡 **Nota:** Se você encontrar erro `"the server has asked for the client to provide credentials"` ao usar kubectl, verifique se você está usando o profile correto:
+> ```bash
+> aws sts get-caller-identity --profile terraform
+> # Deve retornar AssumedRoleUser com terraform-role
+> ```
 
 ---
 
@@ -343,8 +313,8 @@ Crie um Cluster EKS com addons instalados.
 
 **ANTES DE APLICAR:**
 
-1. Edite `02-eks-cluster/locals.tf` e configure seu usuário IAM (veja seção 5.3)
-2. Verifique `02-eks-cluster/eks.cluster.access.tf` contém terraform-role access entry (veja seção 5.4)
+1. ✅ Substitua `<YOUR_ACCOUNT>` em todos os arquivos `.tf` (veja seção 5.1)
+2. ✅ EKS Access já está configurado automaticamente com terraform-role (veja seção 5.2)
 3. (Opcional) Ajuste quantidade de worker nodes em `variables.tf` se necessário
 
 ```bash
