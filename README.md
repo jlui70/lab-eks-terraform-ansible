@@ -25,7 +25,7 @@ Este projeto foi expandido com **documentação completa** para integração com
    - Práticas de mercado (Netflix, Spotify, Airbnb)
    - ROI e estimativa de esforço
 
-2. **[GUIA-IMPLEMENTACAO-ANSIBLE.md](./GUIA-IMPLEMENTACAO-ANSIBLE.md)**  
+2. **[GUIA-IMPLEMENTACAO-ANSIBLE.md](./docs/GUIA-IMPLEMENTACAO-ANSIBLE.md)**  
    - Código pronto para uso (roles, playbooks)
    - Setup passo a passo
    - Exemplos práticos
