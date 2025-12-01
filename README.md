@@ -198,7 +198,50 @@ aws iam attach-role-policy \
 
 ### 4. Configurar AWS CLI Profile
 
-Configure um profile específico para o Terraform assumir a role:
+#### 4.1. **PRIMEIRO:** Configure as credenciais do usuário IAM
+
+Você precisa das **Access Keys** do usuário IAM criado no passo 1.
+
+**Opção A - Se já tem Access Keys:**
+
+```bash
+aws configure --profile default
+# AWS Access Key ID: AKIA...
+# AWS Secret Access Key: ...
+# Default region name: us-east-1
+# Default output format: json
+```
+
+**Opção B - Se precisa criar Access Keys:**
+
+1. Via AWS Console:
+   ```
+   AWS Console → IAM → Users → <YOUR_USER> → Security credentials
+   → Create access key → CLI → Create
+   ```
+
+2. Ou via AWS CLI (se já está logado):
+   ```bash
+   aws iam create-access-key --user-name <YOUR_USER>
+   ```
+
+3. Anote o `AccessKeyId` e `SecretAccessKey` e configure:
+   ```bash
+   aws configure --profile default
+   ```
+
+**Teste as credenciais básicas:**
+
+```bash
+aws sts get-caller-identity --profile default
+# Deve retornar: UserId, Account, Arn do seu usuário IAM
+```
+
+---
+
+#### 4.2. Configure o profile terraform (assume role)
+
+Agora configure o profile `terraform` que assume a role criada no passo 2:
 
 **Atenção:** Substitua `<YOUR_ACCOUNT>` pelo ID da sua conta AWS.
 
@@ -209,11 +252,22 @@ aws configure set external_id 3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a --profile ter
 aws configure set region us-east-1 --profile terraform
 ```
 
-Teste a configuração:
+**Teste a configuração da role:**
 
 ```bash
 aws sts get-caller-identity --profile terraform
+# Deve retornar: UserId com "AssumedRole", Account, Arn com "terraform-role"
 ```
+
+**❌ Se aparecer erro "InvalidClientTokenId":**
+- Suas credenciais do profile `default` estão inválidas ou ausentes
+- Volte ao passo 4.1 e configure as Access Keys corretamente
+- Verifique: `cat ~/.aws/credentials` (deve ter [default] com keys)
+
+**❌ Se aparecer erro "Access Denied":**
+- A role `terraform-role` não foi criada (volte ao passo 2)
+- Ou o usuário IAM não tem permissão para assumir a role
+- Ou o External ID está incorreto
 
 ---
 

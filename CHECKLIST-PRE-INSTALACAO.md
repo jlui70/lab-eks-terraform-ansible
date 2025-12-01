@@ -56,8 +56,20 @@
       Comando: aws iam attach-role-policy --role-name terraform-role --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 
   [ ] AWS CLI Profile 'terraform' configurado
-      Verificar: cat ~/.aws/config | grep terraform -A 5
-      Deve conter: role_arn, source_profile, external_id
+      
+      PASSO 1 - Configure credenciais do usuário IAM primeiro:
+      aws configure --profile default
+      (Informe Access Key ID e Secret Access Key)
+      
+      PASSO 2 - Configure profile terraform (assume role):
+      aws configure set role_arn arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role --profile terraform
+      aws configure set source_profile default --profile terraform
+      aws configure set external_id 3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a --profile terraform
+      aws configure set region us-east-1 --profile terraform
+      
+      Verificar: 
+      - aws sts get-caller-identity --profile default (deve funcionar PRIMEIRO)
+      - aws sts get-caller-identity --profile terraform (AssumedRole)
 
 
 🔐 PRÉ-REQUISITOS SSO (Para Grafana)
