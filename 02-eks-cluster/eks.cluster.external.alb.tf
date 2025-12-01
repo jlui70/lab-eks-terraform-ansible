@@ -5,6 +5,10 @@ resource "helm_release" "load_balancer_controller" {
   version    = "1.13.0"
   namespace  = "kube-system"
 
+  timeout       = 600  # 10 minutos
+  wait          = true
+  wait_for_jobs = true
+
   set {
     name  = "clusterName"
     value = aws_eks_cluster.this.id
@@ -38,6 +42,6 @@ resource "helm_release" "load_balancer_controller" {
   depends_on = [
     aws_iam_role_policy_attachment.load_balancer_controller,
     aws_eks_node_group.this,
-    aws_eks_access_policy_association.bash_user
+    aws_eks_access_policy_association.terraform_role
   ]
 }

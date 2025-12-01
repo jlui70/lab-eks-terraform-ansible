@@ -4,8 +4,6 @@ Este documento descreve testes **manuais** que você pode executar para validar 
 
 > 💡 **RECOMENDAÇÃO:** Para ambientes de produção/staging, considere automatizar estes testes com **Ansible** ou **CI/CD pipelines**.
 >
-> 📚 Ver: [QUICK-START-ANSIBLE.md](./QUICK-START-ANSIBLE.md)
-
 ---
 
 ## Quando Usar Este Guia

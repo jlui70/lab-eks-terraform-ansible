@@ -10,7 +10,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "eks-devopsproject-state-files-<YOUR_ACCOUNT>"
+    bucket         = "eks-devopsproject-state-files-620958830769"
     key            = "cluster/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "eks-devopsproject-state-locking"
@@ -31,7 +31,7 @@ provider "helm" {
     cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.this.id]
+      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.this.id, "--profile", "terraform"]
       command     = "aws"
     }
   }

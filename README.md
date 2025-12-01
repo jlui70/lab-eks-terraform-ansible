@@ -1005,13 +1005,25 @@ O ALB será automaticamente removido.
 
 ---
 
-### Erro 6: "InvalidParameterException: bash_user_arn not found"
+### Erro 6: "InvalidParameterException: bash_user_arn not found" ou "invalid principal"
 
-**Causa:** Nome de usuário IAM em `locals.tf` não foi atualizado.
+**Causa:** Nome de usuário IAM em `locals.tf` não foi atualizado ou você está usando role assumida.
 
-**Solução:**
+**Solução para usuário IAM direto:**
 1. Edite `02-eks-cluster/locals.tf`
-2. Substitua `user/<YOUR_USER>` pelo nome do seu usuário IAM
+2. Substitua `<YOUR_IAM_USER>` pelo nome do seu usuário IAM
+3. Reaplique: `terraform apply -auto-approve`
+
+**Solução se estiver usando terraform-role (AWS profile com assume role):**
+1. Comente o `bash_user` em `02-eks-cluster/eks.cluster.access.tf`
+2. Atualize dependências em `eks.cluster.external.alb.tf`:
+   ```hcl
+   depends_on = [
+     aws_iam_role_policy_attachment.load_balancer_controller,
+     aws_eks_node_group.this,
+     aws_eks_access_policy_association.terraform_role  # alterado de bash_user
+   ]
+   ```
 3. Reaplique: `terraform apply -auto-approve`
 
 ---

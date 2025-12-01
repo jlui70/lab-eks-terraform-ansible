@@ -4,8 +4,6 @@ Este documento descreve o processo **manual** de configuração do Amazon Manage
 
 > 💡 **RECOMENDAÇÃO:** Use a **automação Ansible** ao invés deste processo manual. Economia de tempo: ~90% (de 10-15 min para 2 min).
 >
-> 📚 Ver: [QUICK-START-ANSIBLE.md](./QUICK-START-ANSIBLE.md) ou [README.md - Configuração do Grafana](../README.md#-configuração-do-grafana)
-
 ---
 
 ## Quando Usar Este Guia
@@ -358,7 +356,6 @@ rate(node_network_transmit_bytes_total[5m])
 
 ## 🔗 Links Relacionados
 
-- **Automação Ansible:** [QUICK-START-ANSIBLE.md](./QUICK-START-ANSIBLE.md)
 - **Documentação Grafana Oficial:** https://docs.aws.amazon.com/grafana/
 - **Dashboard Node Exporter Full:** https://grafana.com/grafana/dashboards/1860
 - **PromQL Documentation:** https://prometheus.io/docs/prometheus/latest/querying/basics/
