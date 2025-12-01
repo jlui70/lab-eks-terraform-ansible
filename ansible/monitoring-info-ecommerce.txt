@@ -1,0 +1,72 @@
+# E-commerce Monitoring - Configuração
+
+Data da Configuração: 2025-12-01T18:15:49Z
+
+## Grafana Workspace
+
+- **URL**: https://g-4564818d61.grafana-workspace.us-east-1.amazonaws.com
+- **Autenticação**: AWS SSO (IAM Identity Center)
+- **Data Source**: Amazon Managed Prometheus
+
+## Dashboards Disponíveis
+
+### 1. Kubernetes App Metrics (ID: 6417)
+- Métricas gerais de aplicações
+- CPU, Memory, Network
+- Por namespace e pod
+
+### 2. Kubernetes Pods Monitoring (ID: 14000)
+- Monitoramento detalhado de pods
+- Status, restarts, eventos
+- Resource usage
+
+### 3. Kubernetes Deployments Metrics (ID: 15758)
+- Métricas de deployments
+- Replica status
+- Rollout history
+
+### 4. E-commerce Custom Dashboard
+- Dashboard específico para a aplicação
+- 7 microserviços monitorados
+- Alertas customizados
+
+## Queries Úteis
+
+### CPU Usage por Microserviço
+```promql
+sum(rate(container_cpu_usage_seconds_total{namespace="ecommerce"}[5m])) by (pod)
+```
+
+### Memory Usage por Microserviço
+```promql
+sum(container_memory_usage_bytes{namespace="ecommerce"}) by (pod)
+```
+
+### Pods Running
+```promql
+count(kube_pod_status_phase{namespace="ecommerce", phase="Running"})
+```
+
+### Container Restarts (24h)
+```promql
+sum(increase(kube_pod_container_status_restarts_total{namespace="ecommerce"}[24h]))
+```
+
+## Alertas Recomendados
+
+1. **Pod Down**: Menos de 7 pods running
+2. **High CPU**: CPU > 80% por 5 minutos
+3. **High Memory**: Memory > 500MB
+4. **Container Restart**: Qualquer restart detectado
+
+## Comparação: Manual vs Ansible
+
+| Tarefa | Manual | Ansible | Economia |
+|--------|--------|---------|----------|
+| Importar dashboards | 10 min | 1 min | 90% |
+| Configurar data sources | 5 min | Automático | 100% |
+| Criar dashboard custom | 20 min | 1 min | 95% |
+| **Total** | **35 min** | **2 min** | **94%** |
+
+---
+Configuração automatizada via Ansible 🚀

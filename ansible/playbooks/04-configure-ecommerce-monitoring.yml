@@ -26,7 +26,7 @@
   
   vars:
     # Configurações do Grafana
-    grafana_workspace_id: "g-b774166fa1"
+    grafana_workspace_id: "g-4564818d61"
     grafana_region: "us-east-1"
     grafana_url: "https://{{ grafana_workspace_id }}.grafana-workspace.{{ grafana_region }}.amazonaws.com"
     

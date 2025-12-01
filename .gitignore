@@ -62,4 +62,4 @@ ansible/group_vars/*/vault.yml
 ansible/.vault_password
 
 # Scripts de validação (podem conter outputs)
-validate-pre-commit.log
+validate-pre-commit.log05-monitoring/grafana-api-key.txt
