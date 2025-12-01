@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-ui
+  namespace: ecommerce
+  labels:
+    app: ecommerce-ui
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ecommerce-ui
+  template:
+    metadata:
+      labels:
+        app: ecommerce-ui
+        tier: frontend
+    spec:
+      containers:
+      - name: ecommerce-ui
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: ecommerce-ui-config
+      - name: html-content
+        configMap:
+          name: ecommerce-ui-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-ui-config
+  namespace: ecommerce
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+        
+        # Proxy para APIs dos microserviços
+        location /api/products {
+            proxy_pass http://product-catalog:8080/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/orders {
+            proxy_pass http://order-management:8080/api/orders;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/inventory {
+            proxy_pass http://product-inventory:8080/api/inventory;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/profile {
+            proxy_pass http://profile-management:8080/api/profile;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/shipping {
+            proxy_pass http://shipping-handling:8080/api/shipping;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/support {
+            proxy_pass http://contact-support:8080/api/support;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/health {
+            return 200 '{"status":"ok","service":"ecommerce-ui","microservices":["product-catalog","order-management","product-inventory","profile-management","shipping-handling","contact-support"]}';
+            add_header Content-Type application/json;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-ui
+  namespace: ecommerce
+  labels:
+    app: ecommerce-ui
+spec:
+  type: ClusterIP
+  selector:
+    app: ecommerce-ui
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http

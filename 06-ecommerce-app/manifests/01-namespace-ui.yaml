@@ -1,0 +1,63 @@
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    name: ecommerce
+---
+# E-commerce UI (Frontend React)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-ui
+  namespace: ecommerce
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ecommerce-ui
+  template:
+    metadata:
+      labels:
+        app: ecommerce-ui
+    spec:
+      containers:
+      - name: ecommerce-ui
+        image: rslim087/ecommerce-ui:latest
+        ports:
+        - containerPort: 4000
+        env:
+        - name: REACT_APP_PROFILE_API_HOST
+          value: "http://profile-management:3003"
+        - name: REACT_APP_PRODUCT_API_HOST
+          value: "http://product-catalog:3001"
+        - name: REACT_APP_INVENTORY_API_HOST
+          value: "http://product-inventory:3002"
+        - name: REACT_APP_ORDER_API_HOST
+          value: "http://order-management:9090"
+        - name: REACT_APP_SHIPPING_API_HOST
+          value: "http://shipping-and-handling:8080"
+        - name: REACT_APP_CONTACT_API_HOST
+          value: "http://contact-support-team:8000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-ui
+  namespace: ecommerce
+spec:
+  type: ClusterIP
+  ports:
+  - port: 4000
+    targetPort: 4000
+    name: http
+  selector:
+    app: ecommerce-ui

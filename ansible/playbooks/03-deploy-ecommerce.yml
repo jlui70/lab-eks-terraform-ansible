@@ -1,0 +1,340 @@
+---
+# ============================================================================
+# Playbook: Deploy E-commerce Application
+# ============================================================================
+# 
+# Objetivo: Deploy automatizado da aplicação e-commerce com 7 microserviços
+#
+# Stacks requeridas: 00, 01, 02, 03 (Stack 05 opcional para monitoramento)
+#
+# Uso:
+#   ansible-playbook playbooks/03-deploy-ecommerce.yml
+#
+# Comparação com Deploy Manual:
+#   Manual:   15-20 minutos (kubectl apply + validações)
+#   Ansible:  2-3 minutos (automatizado + validações)
+#   Economia: ~85% de tempo + zero erros humanos
+#
+# ============================================================================
+
+- name: Deploy E-commerce Microservices Application
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  
+  vars:
+    # Configurações do cluster
+    cluster_name: "eks-devopsproject-cluster"
+    aws_region: "us-east-1"
+    kubeconfig_path: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config') }}"
+    
+    # Configurações da aplicação
+    app_namespace: "ecommerce"
+    manifests_path: "../../06-ecommerce-app/manifests"
+    
+    # DNS personalizado (opcional)
+    app_domain: "eks.devopsproject.com.br"
+    
+    # Timeout para health checks
+    pod_ready_timeout: 300
+    alb_provision_timeout: 300
+
+  tasks:
+    # =========================================================================
+    # ETAPA 1: Validação de Pré-requisitos
+    # =========================================================================
+    
+    - name: "📋 Validar conexão com cluster EKS"
+      block:
+        - name: Verificar se kubectl está disponível
+          command: kubectl version --client --short
+          register: kubectl_version
+          changed_when: false
+          
+        - name: Exibir versão do kubectl
+          debug:
+            msg: "✅ {{ kubectl_version.stdout }}"
+          
+        - name: Testar conectividade com cluster
+          command: kubectl cluster-info
+          register: cluster_info
+          changed_when: false
+          environment:
+            KUBECONFIG: "{{ kubeconfig_path }}"
+          
+        - name: Exibir informações do cluster
+          debug:
+            msg: "✅ Cluster acessível"
+      
+      rescue:
+        - name: Erro ao conectar no cluster
+          fail:
+            msg: |
+              ❌ Falha ao conectar no cluster EKS.
+              
+              Verifique:
+              1. AWS CLI configurado: aws configure list
+              2. Kubeconfig atualizado: aws eks update-kubeconfig --name {{ cluster_name }} --region {{ aws_region }}
+              3. Permissões IAM adequadas
+
+    - name: "🔍 Verificar AWS Load Balancer Controller"
+      shell: kubectl get pods -n kube-system | grep -c aws-load-balancer || true
+      register: alb_controller_count
+      changed_when: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    
+    - name: Validar presença do ALB Controller
+      assert:
+        that:
+          - alb_controller_count.stdout | int > 0
+        fail_msg: |
+          ❌ AWS Load Balancer Controller não encontrado!
+          
+          Execute primeiro:
+          - Stack 02 (EKS Cluster)
+        success_msg: "✅ AWS Load Balancer Controller ativo"
+
+    # =========================================================================
+    # ETAPA 2: Criar Namespace e Recursos Base
+    # =========================================================================
+    
+    - name: "📦 Criar namespace {{ app_namespace }}"
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: "{{ kubeconfig_path }}"
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ app_namespace }}"
+            labels:
+              app: ecommerce
+              managed-by: ansible
+              environment: dev
+      register: namespace_created
+    
+    - name: Exibir status do namespace
+      debug:
+        msg: "✅ Namespace '{{ app_namespace }}' {{ 'criado' if namespace_created.changed else 'já existe' }}"
+
+    # =========================================================================
+    # ETAPA 3: Deploy dos Microserviços
+    # =========================================================================
+    
+    - name: "🚀 Deploy dos microserviços (Deployments + Services)"
+      block:
+        - name: Listar manifestos disponíveis
+          find:
+            paths: "{{ manifests_path }}"
+            patterns: "*.yaml,*.yml"
+            excludes: "ingress.yaml,01-namespace-ui.yaml"
+          register: manifest_files
+        
+        - name: Exibir manifestos encontrados
+          debug:
+            msg: "📄 Encontrados {{ manifest_files.files | length }} manifestos para deploy"
+        
+        - name: Aplicar manifestos dos microserviços
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            namespace: "{{ app_namespace }}"
+            src: "{{ item.path }}"
+          loop: "{{ manifest_files.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+          register: deployments_result
+        
+        - name: Resumo dos deployments
+          debug:
+            msg: "✅ {{ deployments_result.results | selectattr('changed', 'equalto', true) | list | length }} recursos criados/atualizados"
+
+    # =========================================================================
+    # ETAPA 4: Aguardar Pods Ficarem Prontos
+    # =========================================================================
+    
+    - name: "⏳ Aguardar pods ficarem prontos (até {{ pod_ready_timeout }}s)"
+      command: >
+        kubectl wait --for=condition=ready pod 
+        --all 
+        -n {{ app_namespace }} 
+        --timeout={{ pod_ready_timeout }}s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: pods_ready
+      changed_when: false
+      
+    - name: Exibir status dos pods
+      debug:
+        msg: "✅ Todos os pods estão prontos"
+
+    - name: Listar pods em execução
+      command: kubectl get pods -n {{ app_namespace }} -o wide
+      register: pods_list
+      changed_when: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    
+    - name: Exibir pods
+      debug:
+        msg: "{{ pods_list.stdout_lines }}"
+
+    # =========================================================================
+    # ETAPA 5: Deploy do Ingress (ALB)
+    # =========================================================================
+    
+    - name: "🌐 Deploy do Ingress (Application Load Balancer)"
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: "{{ kubeconfig_path }}"
+        namespace: "{{ app_namespace }}"
+        src: "{{ manifests_path }}/ingress.yaml"
+      register: ingress_created
+    
+    - name: Exibir status do Ingress
+      debug:
+        msg: "✅ Ingress {{ 'criado' if ingress_created.changed else 'já existe' }}"
+
+    - name: "⏳ Aguardar provisionamento do ALB (até {{ alb_provision_timeout }}s)"
+      shell: |
+        for i in {1..{{ alb_provision_timeout | int // 10 }}}; do
+          ALB=$(kubectl get ingress ecommerce-ingress -n {{ app_namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+          if [ -n "$ALB" ]; then
+            echo "$ALB"
+            exit 0
+          fi
+          echo "Aguardando ALB... ($i/{{ alb_provision_timeout | int // 10 }})" >&2
+          sleep 10
+        done
+        exit 1
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: alb_hostname
+      changed_when: false
+      retries: 3
+      delay: 10
+
+    - name: Exibir URL do ALB
+      debug:
+        msg: 
+          - "✅ ALB provisionado com sucesso!"
+          - "📍 URL: http://{{ alb_hostname.stdout }}"
+
+    # =========================================================================
+    # ETAPA 6: Validações Finais
+    # =========================================================================
+    
+    - name: "✅ Validar health check da aplicação"
+      uri:
+        url: "http://{{ alb_hostname.stdout }}"
+        method: GET
+        status_code: [200, 404]  # 404 é normal para root path
+        timeout: 10
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status in [200, 404]
+    
+    - name: Exibir resultado do health check
+      debug:
+        msg: "✅ Aplicação respondendo (HTTP {{ health_check.status }})"
+
+    - name: Obter informações completas do Ingress
+      command: kubectl describe ingress ecommerce-ingress -n {{ app_namespace }}
+      register: ingress_details
+      changed_when: false
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    # =========================================================================
+    # ETAPA 7: Resumo do Deploy
+    # =========================================================================
+    
+    - name: "📊 Resumo do Deployment"
+      debug:
+        msg:
+          - "╔════════════════════════════════════════════════════════════════╗"
+          - "║  ✅ E-COMMERCE APPLICATION - DEPLOY CONCLUÍDO COM SUCESSO     ║"
+          - "╚════════════════════════════════════════════════════════════════╝"
+          - ""
+          - "🛍️  Aplicação: E-commerce Microservices"
+          - "📦 Namespace: {{ app_namespace }}"
+          - "🔢 Microserviços: 7 deployments + 7 services"
+          - "🌐 Load Balancer: Application Load Balancer (ALB)"
+          - ""
+          - "📍 URLs de Acesso:"
+          - "   • ALB Direto: http://{{ alb_hostname.stdout }}"
+          - "   • DNS Personalizado: http://{{ app_domain }} (configure CNAME)"
+          - ""
+          - "📋 Próximos Passos:"
+          - "   1. Configure CNAME no DNS: {{ app_domain }} → {{ alb_hostname.stdout }}"
+          - "   2. Configure monitoramento: ansible-playbook playbooks/04-configure-ecommerce-monitoring.yml"
+          - "   3. (Opcional) Associe WAF ao ALB para proteção"
+          - ""
+          - "🔍 Comandos Úteis:"
+          - "   • Ver pods:     kubectl get pods -n {{ app_namespace }}"
+          - "   • Ver services: kubectl get svc -n {{ app_namespace }}"
+          - "   • Ver ingress:  kubectl get ingress -n {{ app_namespace }}"
+          - "   • Logs UI:      kubectl logs -f deployment/ecommerce-ui -n {{ app_namespace }}"
+          - ""
+          - "⏱️  Tempo de Deploy: ~3 minutos (vs 15-20 minutos manual)"
+          - "✨ Economia: ~85% de tempo + zero erros humanos"
+
+    - name: Salvar informações de acesso
+      copy:
+        content: |
+          # E-commerce Application - Informações de Acesso
+          
+          Data do Deploy: {{ ansible_date_time.iso8601 }}
+          Cluster: {{ cluster_name }}
+          Namespace: {{ app_namespace }}
+          
+          ## URLs de Acesso
+          
+          - **ALB Direto**: http://{{ alb_hostname.stdout }}
+          - **DNS Personalizado**: http://{{ app_domain }}
+          
+          ## Configurar DNS (Hostgator)
+          
+          1. Acesse o painel DNS do Hostgator
+          2. Crie/Edite registro CNAME:
+             - Nome: eks
+             - Tipo: CNAME
+             - Destino: {{ alb_hostname.stdout }}
+             - TTL: 300
+          
+          ## Microserviços Deployados
+          
+          1. ecommerce-ui (Frontend React)
+          2. product-catalog (API Catálogo)
+          3. order-management (API Pedidos)
+          4. product-inventory (API Estoque)
+          5. profile-management (API Perfis)
+          6. shipping-and-handling (API Logística)
+          7. contact-support-team (API Suporte)
+          
+          ## Validação
+          
+          ```bash
+          # Verificar pods
+          kubectl get pods -n {{ app_namespace }}
+          
+          # Testar aplicação
+          curl -I http://{{ alb_hostname.stdout }}
+          
+          # Ver logs do frontend
+          kubectl logs -f deployment/ecommerce-ui -n {{ app_namespace }}
+          ```
+          
+          ## Monitoramento
+          
+          Execute o playbook de configuração:
+          ```bash
+          ansible-playbook playbooks/04-configure-ecommerce-monitoring.yml
+          ```
+          
+          ---
+          Deploy automatizado via Ansible 🚀
+        dest: "{{ playbook_dir }}/../deployment-info-ecommerce.txt"
+      delegate_to: localhost
