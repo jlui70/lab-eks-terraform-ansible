@@ -30,10 +30,6 @@ Este projeto foi expandido com **documentação completa** para integração com
    - Setup passo a passo
    - Exemplos práticos
 
-5. **[INDICE-DOCUMENTACAO.md](./INDICE-DOCUMENTACAO.md)**  
-   - Índice geral de toda documentação
-   - Fluxo de leitura recomendado
-
 ### **🎯 Benefícios da Integração Ansible:**
 
 | Tarefa | Sem Ansible | Com Ansible | Economia |
@@ -42,8 +38,6 @@ Este projeto foi expandido com **documentação completa** para integração com
 | Deploy sample apps | 10 min (manual) | 1 min (automático) | **90%** |
 | Validação cluster | 15 min (manual) | 1 min (automático) | **93%** |
 | **3 ambientes completos** | **~10 horas** | **~2.5 horas** | **75%** |
-
-**👉 Para começar com Ansible, leia:** [INDICE-DOCUMENTACAO.md](./INDICE-DOCUMENTACAO.md)
 
 ---
 
@@ -57,7 +51,7 @@ Este projeto foi expandido com **documentação completa** para integração com
 │ 2. Stack 01 (Networking)     → VPC + Subnets + NAT              │
 │ 3. Stack 02 (EKS Cluster)    → EKS + Node Group + ALB           │
 │ 4. Stack 03 (Karpenter)      → Auto-scaling                     │
-│ 5. Stack 04 (Security/WAF)   → WAF WebACL                       │
+│ 5. Stack 04 (Security/WAF)   → WAF WebACL (OPCIONAL - requer apps) │
 │ 6. Stack 05 (Monitoring)     → Grafana + Prometheus + API Key   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -402,11 +396,23 @@ kubectl get ec2nodeclasses
 
 ---
 
-### Stack 04 - Security (WAF)
+### Stack 04 - Security (WAF) - OPCIONAL
 
-Habilite o Web Application Firewall para filtrar requisições do Application Load Balancer.
+> 💡 **IMPORTANTE:** Este stack é **opcional** e só faz sentido após deployar aplicações que criam ALBs. 
+> 
+> O WAF protege Application Load Balancers, mas eles só são criados quando você cria recursos Ingress no Kubernetes. Se você ainda não tem aplicações deployadas, pode **pular este stack** e voltar depois.
 
-> ⚠️ **ATENÇÃO - SEQUÊNCIA CRÍTICA:** A associação do WAF com o ALB requer uma sequência específica de passos. Siga exatamente esta ordem:
+**Quando usar:**
+- ✅ Você já deployou aplicações com Ingress (que criam ALBs)
+- ✅ Você quer proteger seus ALBs contra ataques web (SQL injection, XSS, rate limiting)
+
+**Se você não tem aplicações ainda:**
+- ⏭️ Pule para Stack 05 (Monitoring)
+- 🔄 Volte aqui depois de deployar apps
+
+---
+
+#### Passo 4.1: Criar WAF WebACL
 
 #### Passo 4.1: Criar WAF WebACL
 
@@ -424,7 +430,10 @@ terraform apply -auto-approve
 
 #### Passo 4.2: Criar Ingress Sample (provisionará o ALB)
 
-Antes de associar o WAF ao ALB, é necessário que o ALB exista. Crie um deployment de teste:
+> 📝 **Nota:** Este passo cria uma aplicação de exemplo apenas para demonstrar a integração WAF + ALB. 
+> Em produção, você associaria o WAF aos ALBs das suas aplicações reais.
+
+Antes de associar o WAF ao ALB, é necessário que um ALB exista. Vamos criar um deployment de teste:
 
 ```bash
 kubectl apply -f ../02-eks-cluster/samples/ingress-sample-deployment.yml
@@ -446,6 +455,8 @@ curl -I http://$ALB_URL
 ```
 
 **✅ Esperado:** `HTTP/1.1 200 OK`
+
+> 💡 **Automação com Ansible:** Em ambientes de produção, recomendamos automatizar o deploy de aplicações e associação do WAF usando Ansible. Veja [GUIA-IMPLEMENTACAO-ANSIBLE.md](./docs/GUIA-IMPLEMENTACAO-ANSIBLE.md) para exemplos.
 
 ---
 
@@ -503,6 +514,68 @@ Ou verifique no AWS Console:
 1. Acesse: https://console.aws.amazon.com/wafv2/home?region=us-east-1
 2. Clique em **Web ACLs** → `waf-eks-devopsproject-webacl`
 3. Na aba **Associated AWS resources**, você verá o ALB listado
+
+---
+
+### 🤖 Automatizando WAF com Ansible (Recomendado para Produção)
+
+Os passos manuais acima são úteis para **demonstração e aprendizado**, mas em produção recomendamos automatizar:
+
+**Por que automatizar?**
+- ✅ Evita passos manuais repetitivos
+- ✅ Garante consistência entre ambientes (dev/staging/prod)
+- ✅ Permite CI/CD completo
+- ✅ Reduz erros humanos
+
+**Como fazer:**
+
+Crie um playbook Ansible que:
+1. Deploya sua aplicação com Ingress
+2. Aguarda o ALB ser provisionado
+3. Associa automaticamente o WAF ao ALB
+
+**Exemplo básico:**
+
+```yaml
+# ansible/playbooks/deploy-app-with-waf.yml
+- name: Deploy aplicação com WAF
+  hosts: localhost
+  tasks:
+    - name: Deploy aplicação
+      kubernetes.core.k8s:
+        state: present
+        src: ../k8s/my-app-ingress.yml
+    
+    - name: Aguardar ALB ser criado
+      kubernetes.core.k8s_info:
+        kind: Ingress
+        name: my-app-ingress
+        namespace: production
+      register: ingress
+      until: ingress.resources[0].status.loadBalancer.ingress is defined
+      retries: 30
+      delay: 10
+    
+    - name: Obter ARN do WAF
+      shell: |
+        cd ../04-security
+        terraform output -raw waf_arn
+      register: waf_arn
+    
+    - name: Associar WAF ao Ingress
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: my-app-ingress
+            namespace: production
+            annotations:
+              alb.ingress.kubernetes.io/wafv2-acl-arn: "{{ waf_arn.stdout }}"
+```
+
+📖 **Para implementação completa, veja:** [GUIA-IMPLEMENTACAO-ANSIBLE.md](./docs/GUIA-IMPLEMENTACAO-ANSIBLE.md)
 
 ---
 
@@ -579,15 +652,22 @@ aws eks list-addons --cluster-name eks-devopsproject-cluster --profile terraform
 
 **📊 Resumo de Recursos Provisionados:**
 
-| Stack | Recursos | Tempo Estimado |
-|-------|----------|----------------|
-| 00 - Backend | 3 | < 1 min |
-| 01 - Networking | 21 | 2-3 min |
-| 02 - EKS Cluster | 21 | 15-20 min |
-| 03 - Karpenter | 10 | 3-5 min |
-| 04 - Security/WAF | 2 | 1 min |
-| 05 - Monitoring | 7 | 20-25 min |
-| **TOTAL** | **64** | **~40-55 min** |
+| Stack | Recursos | Tempo Estimado | Notas |
+|-------|----------|----------------|-------|
+| 00 - Backend | 3 | < 1 min | Obrigatório |
+| 01 - Networking | 21 | 2-3 min | Obrigatório |
+| 02 - EKS Cluster | 21 | 15-20 min | Obrigatório |
+| 03 - Karpenter | 10 | 3-5 min | Obrigatório |
+| 04 - Security/WAF | 2 | 1 min | **Opcional*** |
+| 05 - Monitoring | 7 | 20-25 min | Obrigatório |
+| **TOTAL (sem Stack 04)** | **62** | **~39-54 min** | Cluster funcional |
+| **TOTAL (com Stack 04)** | **64** | **~40-55 min** | + WAF (requer apps) |
+
+> **\* Stack 04 (WAF) é opcional** porque:
+> - WAF protege ALBs, que só existem quando você deploya aplicações com Ingress
+> - Se você ainda não tem apps, pode pular este stack
+> - Você pode voltar e aplicar Stack 04 depois de deployar suas aplicações
+> - Para automação completa de apps + WAF, veja [GUIA-IMPLEMENTACAO-ANSIBLE.md](./docs/GUIA-IMPLEMENTACAO-ANSIBLE.md)
 
 ---
 
