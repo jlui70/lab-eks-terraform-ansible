@@ -198,6 +198,20 @@ aws iam attach-role-policy \
 
 ### 4. Configurar AWS CLI Profile
 
+> ⚠️ **IMPORTANTE:** Se você **JÁ** tem AWS CLI configurado e funcionando, **PULE esta seção**!
+> 
+> Teste primeiro:
+> ```bash
+> aws sts get-caller-identity --profile terraform
+> ```
+> 
+> ✅ Se retornar sucesso com `assumed-role/terraform-role`, suas credenciais JÁ ESTÃO CORRETAS.  
+> ❌ **NÃO** execute os comandos abaixo, pois isso **sobrescreverá** sua configuração funcional!
+>
+> Continue direto para a seção 5 (Substituições nos arquivos).
+
+---
+
 #### 4.1. **PRIMEIRO:** Configure as credenciais do usuário IAM
 
 Você precisa das **Access Keys** do usuário IAM criado no passo 1.
