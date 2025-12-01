@@ -1059,24 +1059,20 @@ O ALB será automaticamente removido.
 
 ### Erro 6: "InvalidParameterException: bash_user_arn not found" ou "invalid principal"
 
-**Causa:** Nome de usuário IAM em `locals.tf` não foi atualizado ou você está usando role assumida.
+> ⚠️ **ESTE ERRO NÃO DEVE MAIS ACONTECER** - O código foi atualizado para usar `terraform-role` automaticamente. Esta seção é mantida apenas para referência histórica.
 
-**Solução para usuário IAM direto:**
-1. Edite `02-eks-cluster/locals.tf`
-2. Substitua `<YOUR_IAM_USER>` pelo nome do seu usuário IAM
-3. Reaplique: `terraform apply -auto-approve`
+**Causa:** Versões antigas do código tentavam criar access entry para um usuário IAM direto (`bash_user`), mas isso causava problemas quando se usava assume role.
 
-**Solução se estiver usando terraform-role (AWS profile com assume role):**
-1. Comente o `bash_user` em `02-eks-cluster/eks.cluster.access.tf`
-2. Atualize dependências em `eks.cluster.external.alb.tf`:
-   ```hcl
-   depends_on = [
-     aws_iam_role_policy_attachment.load_balancer_controller,
-     aws_eks_node_group.this,
-     aws_eks_access_policy_association.terraform_role  # alterado de bash_user
-   ]
-   ```
-3. Reaplique: `terraform apply -auto-approve`
+**Solução atual (código atualizado):**
+✅ O arquivo `02-eks-cluster/eks.cluster.access.tf` agora usa **apenas** `terraform-role`  
+✅ Não há mais referência a `bash_user` no código  
+✅ Não há mais placeholder `<YOUR_IAM_USER>` em `locals.tf`  
+✅ **Nenhuma ação necessária da sua parte!**
+
+**Se você ainda encontrar este erro (código desatualizado):**
+1. Verifique se você tem a versão mais recente do repositório
+2. O arquivo `eks.cluster.access.tf` deve ter APENAS `terraform_role`, sem `bash_user`
+3. Se necessário, faça `git pull` para atualizar o código
 
 ---
 
