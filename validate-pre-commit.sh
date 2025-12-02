@@ -100,7 +100,7 @@ echo "3️⃣  Procurando dados sensíveis no código"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Buscar Account ID real (excluir README.md onde é exemplo)
-if grep -r "620958830769" . \
+if grep -r "<YOUR_ACCOUNT>" . \
     --exclude-dir=.git \
     --exclude-dir=docs \
     --exclude-dir=.terraform \
@@ -108,8 +108,8 @@ if grep -r "620958830769" . \
     --exclude="CHECKLIST-PRE-COMMIT.md" \
     --exclude="RESUMO-VALIDACAO-GITHUB.md" \
     --exclude="validate-pre-commit.sh" 2>/dev/null | grep -q .; then
-    check_warn "Account ID 620958830769 encontrado em:"
-    grep -r "620958830769" . \
+    check_warn "Account ID <YOUR_ACCOUNT> encontrado em:"
+    grep -r "<YOUR_ACCOUNT>" . \
         --exclude-dir=.git \
         --exclude-dir=docs \
         --exclude-dir=.terraform \

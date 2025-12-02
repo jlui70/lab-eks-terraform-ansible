@@ -5,7 +5,7 @@
 
 set -e
 
-BUCKET_NAME="eks-devopsproject-state-files-620958830769"
+BUCKET_NAME="eks-devopsproject-state-files-<YOUR_ACCOUNT>"
 
 echo "╔══════════════════════════════════════════════════════════════════╗"
 echo "║     🔧 CORRIGINDO BUCKET S3 TRAVADO                             ║"

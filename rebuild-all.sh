@@ -9,10 +9,10 @@
 set -e  # Para em caso de erro
 
 echo "╔══════════════════════════════════════════════════════════════════╗"
-echo "║     🚀 RECRIANDO INFRAESTRUTURA EKS - 6 STACKS + ANSIBLE       ║"
+echo "║     🚀 RECRIANDO INFRAESTRUTURA EKS - 6 STACKS                  ║"
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "📋 Ordem: 00-backend → 01-networking → 02-eks → 03-karpenter → 04-security → 05-monitoring → 06-ecommerce (Ansible)"
+echo "📋 Ordem: 00-backend → 01-networking → 02-eks → 03-karpenter → 04-security → 05-monitoring"
 echo ""
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -119,59 +119,76 @@ apply_stack "Stack 03 - Karpenter (Auto-scaling)" "03-karpenter-auto-scaling"
 apply_stack "Stack 04 - Security (WAF)" "04-security"
 apply_stack "Stack 05 - Monitoring (Grafana + Prometheus)" "05-monitoring"
 
-# ═══════════════════════════════════════════════════════════════════
-# Stack 06 - E-commerce Application + Automação (Ansible)
-# ═══════════════════════════════════════════════════════════════════
+# Criar recursos Kubernetes de teste (opcional)
 echo "═══════════════════════════════════════════════════════════════════"
-echo "🎨 Stack 06 - E-commerce Application + Automação Ansible"
+echo "🧪 Recursos de Teste (Opcional)"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
-echo "Este stack deploya:"
-echo "  • 7 microserviços (e-commerce-ui, product-catalog, etc.)"
-echo "  • Ingress + ALB"
-echo "  • Associação automática do WAF ao ALB"
-echo "  • Configuração do Grafana + Data Source Prometheus"
-echo "  • Dashboards para monitoramento"
-echo ""
-echo "⏱️  Tempo estimado: ~5 minutos via Ansible (vs 25-30 min manual)"
-echo ""
-read -p "Deployar aplicação E-commerce via Ansible? (S/n): " deploy_ecommerce
+read -p "Criar deployment NGINX de teste? (S/n): " create_test
 
-if [[ ! $deploy_ecommerce =~ ^[Nn]$ ]]; then
-    cd "$PROJECT_ROOT/ansible"
+if [[ ! $create_test =~ ^[Nn]$ ]]; then
+    echo "🌐 Criando deployment NGINX + Ingress..."
     
-    echo ""
-    echo "═══════════════════════════════════════════════════════════════════"
-    echo "🛍️  Passo 1/2: Deploying E-commerce + Associação WAF"
-    echo "═══════════════════════════════════════════════════════════════════"
-    ansible-playbook playbooks/03-deploy-ecommerce.yml
+    # Criar deployment e service
+    kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eks-devopsproject-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+EOF
     
-    echo ""
-    echo "═══════════════════════════════════════════════════════════════════"
-    echo "📊 Passo 2/2: Configurando Grafana + Dashboards"
-    echo "═══════════════════════════════════════════════════════════════════"
-    ansible-playbook playbooks/01-configure-grafana.yml
-    
-    echo ""
-    echo "✅ Stack 06 completa (aplicação + WAF + monitoramento configurado)"
-    echo ""
-    
-    # Obter URL do ALB
-    ALB_URL=$(kubectl get ingress ecommerce-ingress -n ecommerce -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
-    
-    if [ -n "$ALB_URL" ]; then
-        echo "🌐 URLs de Acesso:"
-        echo "   • ALB Direto: http://$ALB_URL"
-        echo "   • DNS Personalizado: http://eks.devopsproject.com.br"
-        echo ""
-        echo "📋 Próximo passo: Configure CNAME no DNS"
-        echo "   Tipo: CNAME"
-        echo "   Nome: eks"
-        echo "   Destino: $ALB_URL"
-        echo ""
-    fi
+    echo "⏳ Aguardando ALB ser provisionado (90s)..."
+    sleep 90
+    echo "✅ Recursos de teste criados"
 else
-    echo "⏸️  Stack 06 pulada (você pode deployar depois com: cd ansible && ansible-playbook playbooks/03-deploy-ecommerce.yml)"
+    echo "⏸️  Pulando criação de recursos de teste"
 fi
 echo ""
 
@@ -179,44 +196,35 @@ echo "╔═══════════════════════�
 echo "║           ✅ INFRAESTRUTURA COMPLETA RECRIADA!                   ║"
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "📊 Stacks aplicadas:"
+echo "📊 Stacks aplicadas (6 stacks):"
 echo "  ✅ Stack 00: Backend (S3 + DynamoDB para Terraform State)"
 echo "  ✅ Stack 01: Networking (VPC + Subnets + NAT Gateways)"
 echo "  ✅ Stack 02: EKS Cluster (Kubernetes + ALB Controller + External DNS)"
 echo "  ✅ Stack 03: Karpenter (Auto-scaling avançado)"
-echo "  ✅ Stack 04: Security (WAF Web ACL - 8 regras)"
+echo "  ✅ Stack 04: Security (WAF Web ACL)"
 echo "  ✅ Stack 05: Monitoring (Grafana + Prometheus)"
-if [[ ! $deploy_ecommerce =~ ^[Nn]$ ]]; then
-echo "  ✅ Stack 06: E-commerce (7 microserviços + WAF + Grafana) - via Ansible"
+if [[ ! $create_test =~ ^[Nn]$ ]]; then
+echo "  ✅ Recursos de teste (NGINX + Ingress + ALB)"
 fi
 echo ""
 echo "🔍 Verificar recursos:"
 echo "  kubectl get nodes"
 echo "  kubectl get pods -A"
-if [[ ! $deploy_ecommerce =~ ^[Nn]$ ]]; then
-echo "  kubectl get pods -n ecommerce"
-echo "  kubectl get ingress -n ecommerce"
-fi
+echo "  kubectl get ingress"
 echo ""
-if [[ ! $deploy_ecommerce =~ ^[Nn]$ ]]; then
-echo "🧪 Testar aplicação E-commerce:"
-echo "  ALB_URL=\$(kubectl get ingress ecommerce-ingress -n ecommerce -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+if [[ ! $create_test =~ ^[Nn]$ ]]; then
+echo "🌐 Obter URL do ALB:"
+echo "  kubectl get ingress eks-devopsproject-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+echo ""
+echo "🧪 Testar aplicação:"
+echo "  ALB_URL=\$(kubectl get ingress eks-devopsproject-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 echo "  curl http://\$ALB_URL"
 echo ""
-echo "🔒 Validar WAF associado:"
-echo "  ALB_ARN=\$(aws elbv2 describe-load-balancers --query \"LoadBalancers[?contains(LoadBalancerName, 'k8s-ecommerce')].LoadBalancerArn\" --output text --profile terraform)"
-echo "  aws wafv2 get-web-acl-for-resource --resource-arn \"\$ALB_ARN\" --region us-east-1 --profile terraform"
-echo ""
 fi
-echo "📊 Grafana:"
-cd "$PROJECT_ROOT/05-monitoring"
-GRAFANA_URL=$(terraform output -raw grafana_workspace_url 2>/dev/null || echo "")
-if [ -n "$GRAFANA_URL" ]; then
-echo "  URL: $GRAFANA_URL"
-echo "  Login: AWS SSO (usuário configurado no IAM Identity Center)"
-fi
+echo "📊 Monitoramento:"
+echo "  - Grafana: Acesse via AWS Console → Amazon Managed Grafana"
+echo "  - Prometheus: Integrado automaticamente"
 echo ""
-echo "📈 Total de recursos: 78 (infraestrutura completa)"
 echo "💰 Custo mensal estimado: ~$273/mês"
 echo "🗑️  Para destruir tudo: ./destroy-all.sh"
 echo ""
