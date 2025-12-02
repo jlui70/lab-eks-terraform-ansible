@@ -16,7 +16,7 @@ echo "║     🗑️  DESTRUINDO INFRAESTRUTURA EKS - 6 STACKS               �
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
 
-PROJECT_ROOT="/home/luiz7/Projects/lab-eks-terraform-ansible"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Função para destruir uma stack
 destroy_stack() {
