@@ -8,6 +8,9 @@ resource "helm_release" "load_balancer_controller" {
   timeout       = 600  # 10 minutos
   wait          = true
   wait_for_jobs = true
+  
+  # Evita erro no destroy quando cluster já foi deletado
+  cleanup_on_fail = false
 
   set {
     name  = "clusterName"

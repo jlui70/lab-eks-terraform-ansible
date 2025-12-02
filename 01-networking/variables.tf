@@ -9,7 +9,7 @@ variable "assume_role" {
   })
 
    default = {
-    role_arn    = "arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role"
+    role_arn    = "arn:aws:iam::620958830769:role/terraform-role"
     external_id = "3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a"
   }
 }
@@ -58,7 +58,7 @@ variable "vpc" {
 
   default = {
     name                     = "eks-devopsproject-vpc"
-    cidr_block               = "10.0.0.0/24"
+    cidr_block               = "10.0.0.0/22"
     internet_gateway_name    = "internet-gateway"
     public_route_table_name  = "public-route-table"
     private_route_table_name = "private-route-table"

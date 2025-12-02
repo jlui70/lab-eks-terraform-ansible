@@ -1,12 +1,9 @@
 #!/bin/bash
 
 # Script para destruir todos os recursos na ordem correta
-# Versão: 3.3
-# Data: 02 de Dezembro de 2025
-# Stacks: 00-backend até 06-ecommerce-app (Terraform + Kubernetes resources)
-# Changelog v3.3: Documentação atualizada (Stack 06 já estava sendo deletada via namespace ecommerce)
-# Changelog v3.2: Limpeza IAM dinâmica (lê nomes do Terraform state - suporta nomes customizados)
-# Changelog v3.1: Limpeza IAM automática (previne erro EntityAlreadyExists)
+# Versão: 3.0
+# Data: 27 de Novembro de 2025
+# Stacks: 00-backend até 05-monitoring
 # Changelog v3.0: Remoção automática de resources órfãos do state (Stack 04, 03, 02)
 
 set -e  # Para em caso de erro
@@ -165,7 +162,6 @@ destroy_stack "Stack 02 - EKS Cluster" "02-eks-cluster"
 
 # IMPORTANTE: Limpar IAM roles/policies órfãs que o Terraform pode não ter deletado
 # Isso evita erro "EntityAlreadyExists" em reinstalações
-# VERSÃO DINÂMICA v3.2: Lê nomes reais do Terraform state (funciona mesmo se usuário alterar variables.tf)
 echo "═══════════════════════════════════════════════════════════════════"
 echo "🧹 Limpando IAM Roles/Policies órfãs (prevenção de conflitos)..."
 echo "═══════════════════════════════════════════════════════════════════"
@@ -173,10 +169,6 @@ echo "════════════════════════�
 # Função auxiliar para deletar role IAM (detach policies primeiro)
 delete_iam_role() {
     local role_name=$1
-    
-    if [ -z "$role_name" ]; then
-        return 0
-    fi
     
     if aws iam get-role --role-name "$role_name" --profile terraform &>/dev/null; then
         echo "  🗑️  Deletando role: $role_name"
@@ -209,58 +201,11 @@ delete_iam_role() {
                 --profile terraform 2>/dev/null || true
         done
         
-        # Remove from instance profiles AND delete the profiles
-        INSTANCE_PROFILES=$(aws iam list-instance-profiles-for-role \
-            --role-name "$role_name" \
-            --profile terraform \
-            --query 'InstanceProfiles[].InstanceProfileName' \
-            --output text 2>/dev/null || echo "")
-        
-        for profile_name in $INSTANCE_PROFILES; do
-            echo "    → Removendo role do instance profile: $profile_name"
-            aws iam remove-role-from-instance-profile \
-                --instance-profile-name "$profile_name" \
-                --role-name "$role_name" \
-                --profile terraform 2>/dev/null || true
-            
-            # Deletar o instance profile (órfão criado pelo EKS)
-            echo "    → Deletando instance profile órfão: $profile_name"
-            aws iam delete-instance-profile \
-                --instance-profile-name "$profile_name" \
-                --profile terraform 2>/dev/null || true
-        done
-        
         # Delete role
         aws iam delete-role --role-name "$role_name" --profile terraform 2>/dev/null && \
             echo "    ✅ Role $role_name deletada" || \
             echo "    ⚠️  Role $role_name não pôde ser deletada"
     fi
-}
-
-# Função auxiliar para extrair nome de role do Terraform state
-get_role_name_from_state() {
-    local stack_path=$1
-    local resource_address=$2
-    
-    cd "$PROJECT_ROOT/$stack_path"
-    
-    # Tentar obter nome da role do state
-    local role_name=$(terraform state show "$resource_address" 2>/dev/null | grep -E "^\s+name\s+=" | head -1 | awk -F'"' '{print $2}')
-    
-    echo "$role_name"
-}
-
-# Função auxiliar para extrair nome de policy do Terraform state
-get_policy_name_from_state() {
-    local stack_path=$1
-    local resource_address=$2
-    
-    cd "$PROJECT_ROOT/$stack_path"
-    
-    # Tentar obter nome da policy do state
-    local policy_name=$(terraform state show "$resource_address" 2>/dev/null | grep -E "^\s+name\s+=" | head -1 | awk -F'"' '{print $2}')
-    
-    echo "$policy_name"
 }
 
 # Obter account ID dinamicamente
@@ -269,83 +214,40 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile
 if [ -z "$ACCOUNT_ID" ]; then
     echo "  ⚠️  Não foi possível obter Account ID, pulando limpeza de IAM"
 else
-    echo "  📊 Account ID: $ACCOUNT_ID"
-    echo "  🔍 Lendo nomes reais das roles do Terraform state..."
-    echo ""
+    # Deletar roles conhecidas da Stack 02
+    delete_iam_role "AmazonEKS_EFS_CSI_DriverRole"
+    delete_iam_role "aws-load-balancer-controller"
+    delete_iam_role "eks-devopsproject-node-group-role"
+    delete_iam_role "eks-devopsproject-cluster-role"
+    delete_iam_role "external-dns-irsa-role"
     
-    # ======================================================================
-    # STACK 02 - EKS CLUSTER ROLES (lendo dinamicamente do state)
-    # ======================================================================
-    echo "  🗂️  Stack 02 - EKS Cluster"
+    # Deletar roles da Stack 03 (Karpenter)
+    delete_iam_role "KarpenterControllerRole"
+    delete_iam_role "KarpenterNodeRole"
     
-    ROLE_CSI=$(get_role_name_from_state "02-eks-cluster" "aws_iam_role.container_storage_interface")
-    ROLE_ALB=$(get_role_name_from_state "02-eks-cluster" "aws_iam_role.load_balancer_controller")
-    ROLE_NODE=$(get_role_name_from_state "02-eks-cluster" "aws_iam_role.eks_cluster_node_group")
-    ROLE_CLUSTER=$(get_role_name_from_state "02-eks-cluster" "aws_iam_role.eks_cluster")
-    ROLE_DNS=$(get_role_name_from_state "02-eks-cluster" "aws_iam_role.external_dns")
+    # Deletar roles da Stack 05 (Monitoring)
+    delete_iam_role "GrafanaWorkspaceRole"
     
-    POLICY_ALB=$(get_policy_name_from_state "02-eks-cluster" "aws_iam_policy.load_balancer_controller")
+    # Deletar policies standalone
+    echo "  🗑️  Deletando policies standalone..."
     
-    [ -n "$ROLE_CSI" ] && delete_iam_role "$ROLE_CSI" || delete_iam_role "AmazonEKS_EFS_CSI_DriverRole"
-    [ -n "$ROLE_ALB" ] && delete_iam_role "$ROLE_ALB" || delete_iam_role "aws-load-balancer-controller"
-    [ -n "$ROLE_NODE" ] && delete_iam_role "$ROLE_NODE" || delete_iam_role "eks-devopsproject-node-group-role"
-    [ -n "$ROLE_CLUSTER" ] && delete_iam_role "$ROLE_CLUSTER" || delete_iam_role "eks-devopsproject-cluster-role"
-    [ -n "$ROLE_DNS" ] && delete_iam_role "$ROLE_DNS" || delete_iam_role "external-dns-irsa-role"
-    
-    # Deletar policy ALB Controller
-    if [ -n "$POLICY_ALB" ]; then
-        POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/${POLICY_ALB}"
-    else
-        POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy"
-    fi
-    
+    POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy"
     if aws iam get-policy --policy-arn "$POLICY_ARN" --profile terraform &>/dev/null; then
-        echo "  🗑️  Deletando policy: $(basename $POLICY_ARN)"
         aws iam delete-policy --policy-arn "$POLICY_ARN" --profile terraform 2>/dev/null && \
-            echo "    ✅ Policy deletada" || \
-            echo "    ⚠️  Policy não pôde ser deletada (pode estar attached)"
-    fi
-    echo ""
-    
-    # ======================================================================
-    # STACK 03 - KARPENTER ROLES (lendo dinamicamente do state)
-    # ======================================================================
-    echo "  🗂️  Stack 03 - Karpenter"
-    
-    ROLE_KARPENTER=$(get_role_name_from_state "03-karpenter-auto-scaling" "aws_iam_role.karpenter_controller")
-    POLICY_KARPENTER=$(get_policy_name_from_state "03-karpenter-auto-scaling" "aws_iam_policy.karpenter_controller")
-    
-    [ -n "$ROLE_KARPENTER" ] && delete_iam_role "$ROLE_KARPENTER" || delete_iam_role "KarpenterControllerRole"
-    
-    # Deletar policy Karpenter
-    if [ -n "$POLICY_KARPENTER" ]; then
-        POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/${POLICY_KARPENTER}"
-    else
-        POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/KarpenterControllerPolicy"
+            echo "    ✅ Policy AWSLoadBalancerControllerIAMPolicy deletada" || \
+            echo "    ⚠️  Policy não pôde ser deletada (pode estar attached a outra role)"
     fi
     
+    POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/KarpenterControllerPolicy"
     if aws iam get-policy --policy-arn "$POLICY_ARN" --profile terraform &>/dev/null; then
-        echo "  🗑️  Deletando policy: $(basename $POLICY_ARN)"
         aws iam delete-policy --policy-arn "$POLICY_ARN" --profile terraform 2>/dev/null && \
-            echo "    ✅ Policy deletada" || \
+            echo "    ✅ Policy KarpenterControllerPolicy deletada" || \
             echo "    ⚠️  Policy não pôde ser deletada"
     fi
-    echo ""
     
-    # ======================================================================
-    # STACK 05 - MONITORING ROLES (lendo dinamicamente do state)
-    # ======================================================================
-    echo "  🗂️  Stack 05 - Monitoring"
-    
-    ROLE_GRAFANA=$(get_role_name_from_state "05-monitoring" "aws_iam_role.grafana")
-    
-    [ -n "$ROLE_GRAFANA" ] && delete_iam_role "$ROLE_GRAFANA" || delete_iam_role "GrafanaWorkspaceRole"
-    echo ""
-    
-    echo "  ✅ Limpeza de IAM concluída (modo dinâmico v3.2)"
+    echo "  ✅ Limpeza de IAM concluída"
 fi
 echo ""
-
 destroy_stack "Stack 01 - Networking (VPC)" "01-networking"
 
 # Backend por último

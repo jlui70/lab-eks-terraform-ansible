@@ -41709,3 +41709,121 @@ setting deprecation_warnings=False in ansible.cfg.
   msg: Cluster está saudável!
 2025-11-30 08:33:17,616 p=30598 u=luiz7 n=ansible | PLAY RECAP *********************************************************************************************************************************************************************************
 2025-11-30 08:33:17,616 p=30598 u=luiz7 n=ansible | localhost                  : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-12-02 15:01:43,808 p=89959 u=luiz7 n=ansible | [DEPRECATION WARNING]: [defaults]collections_paths option, does not fit var naming standard, use the singular form 
+collections_path instead. This feature will be removed from ansible-core in version 2.19. Deprecation warnings can be disabled by 
+setting deprecation_warnings=False in ansible.cfg.
+2025-12-02 15:01:44,427 p=89959 u=luiz7 n=ansible | PLAY [🎨 Configurar Grafana Workspace] ********************************************************************************************
+2025-12-02 15:01:44,436 p=89959 u=luiz7 n=ansible | TASK [Gathering Facts] ************************************************************************************************************
+2025-12-02 15:01:47,822 p=89959 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:01:47,844 p=89959 u=luiz7 n=ansible | TASK [📋 Obter outputs do Terraform (Stack 05)] ***********************************************************************************
+2025-12-02 15:01:48,523 p=89959 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:01:48,531 p=89959 u=luiz7 n=ansible | TASK [💾 Parsear outputs do Terraform] ********************************************************************************************
+2025-12-02 15:01:48,575 p=89959 u=luiz7 n=ansible | fatal: [localhost]: FAILED! => 
+  msg: "The task includes an option with an undefined variable. The error was: 'dict object' has no attribute 'grafana_workspace_url'. 'dict object' has no attribute 'grafana_workspace_url'\n\nThe error appears to be in '/home/luiz7/Projects/lab-eks-terraform-ansible/ansible/playbooks/04-configure-grafana.yml': line 27, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: \"\U0001F4BE Parsear outputs do Terraform\"\n      ^ here"
+2025-12-02 15:01:48,576 p=89959 u=luiz7 n=ansible | PLAY RECAP ************************************************************************************************************************
+2025-12-02 15:01:48,577 p=89959 u=luiz7 n=ansible | localhost                  : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-12-02 15:02:15,167 p=90316 u=luiz7 n=ansible | [DEPRECATION WARNING]: [defaults]collections_paths option, does not fit var naming standard, use the singular form 
+collections_path instead. This feature will be removed from ansible-core in version 2.19. Deprecation warnings can be disabled by 
+setting deprecation_warnings=False in ansible.cfg.
+2025-12-02 15:02:15,616 p=90316 u=luiz7 n=ansible | PLAY [🎨 Configurar Grafana Workspace] ********************************************************************************************
+2025-12-02 15:02:15,622 p=90316 u=luiz7 n=ansible | TASK [Gathering Facts] ************************************************************************************************************
+2025-12-02 15:02:18,617 p=90316 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:02:18,638 p=90316 u=luiz7 n=ansible | TASK [📋 Obter outputs do Terraform (Stack 05)] ***********************************************************************************
+2025-12-02 15:02:19,383 p=90316 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:02:19,394 p=90316 u=luiz7 n=ansible | TASK [💾 Parsear outputs do Terraform] ********************************************************************************************
+2025-12-02 15:02:19,455 p=90316 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:02:19,463 p=90316 u=luiz7 n=ansible | TASK [💾 Extrair valores dos outputs] *********************************************************************************************
+2025-12-02 15:02:19,485 p=90316 u=luiz7 n=ansible | fatal: [localhost]: FAILED! => 
+  msg: "The task includes an option with an undefined variable. The error was: 'dict object' has no attribute 'grafana_workspace_url'. 'dict object' has no attribute 'grafana_workspace_url'\n\nThe error appears to be in '/home/luiz7/Projects/lab-eks-terraform-ansible/ansible/playbooks/04-configure-grafana.yml': line 31, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: \"\U0001F4BE Extrair valores dos outputs\"\n      ^ here"
+2025-12-02 15:02:19,487 p=90316 u=luiz7 n=ansible | PLAY RECAP ************************************************************************************************************************
+2025-12-02 15:02:19,487 p=90316 u=luiz7 n=ansible | localhost                  : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-12-02 15:03:48,766 p=90852 u=luiz7 n=ansible | [DEPRECATION WARNING]: [defaults]collections_paths option, does not fit var naming standard, use the singular form 
+collections_path instead. This feature will be removed from ansible-core in version 2.19. Deprecation warnings can be disabled by 
+setting deprecation_warnings=False in ansible.cfg.
+2025-12-02 15:03:49,243 p=90852 u=luiz7 n=ansible | PLAY [🎨 Configurar Grafana Workspace] ********************************************************************************************
+2025-12-02 15:03:49,250 p=90852 u=luiz7 n=ansible | TASK [Gathering Facts] ************************************************************************************************************
+2025-12-02 15:03:52,671 p=90852 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:03:52,692 p=90852 u=luiz7 n=ansible | TASK [📋 Obter outputs do Terraform (Stack 05)] ***********************************************************************************
+2025-12-02 15:03:53,388 p=90852 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:03:53,396 p=90852 u=luiz7 n=ansible | TASK [💾 Parsear outputs do Terraform] ********************************************************************************************
+2025-12-02 15:03:53,444 p=90852 u=luiz7 n=ansible | fatal: [localhost]: FAILED! => 
+  msg: "The task includes an option with an undefined variable. The error was: 'dict object' has no attribute 'grafana_workspace_url'. 'dict object' has no attribute 'grafana_workspace_url'\n\nThe error appears to be in '/home/luiz7/Projects/lab-eks-terraform-ansible/ansible/playbooks/04-configure-grafana.yml': line 27, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: \"\U0001F4BE Parsear outputs do Terraform\"\n      ^ here"
+2025-12-02 15:03:53,445 p=90852 u=luiz7 n=ansible | PLAY RECAP ************************************************************************************************************************
+2025-12-02 15:03:53,446 p=90852 u=luiz7 n=ansible | localhost                  : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-12-02 15:04:22,574 p=91138 u=luiz7 n=ansible | [DEPRECATION WARNING]: [defaults]collections_paths option, does not fit var naming standard, use the singular form 
+collections_path instead. This feature will be removed from ansible-core in version 2.19. Deprecation warnings can be disabled by 
+setting deprecation_warnings=False in ansible.cfg.
+2025-12-02 15:04:23,071 p=91138 u=luiz7 n=ansible | PLAY [🎨 Configurar Grafana Workspace] ********************************************************************************************
+2025-12-02 15:04:23,082 p=91138 u=luiz7 n=ansible | TASK [Gathering Facts] ************************************************************************************************************
+2025-12-02 15:04:26,295 p=91138 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:04:26,314 p=91138 u=luiz7 n=ansible | TASK [ℹ️  Informações do Grafana] **************************************************************************************************
+2025-12-02 15:04:26,339 p=91138 u=luiz7 n=ansible | ok: [localhost] => 
+  msg:
+  - 'Grafana URL: https://g-97013666db.grafana-workspace.us-east-1.amazonaws.com/'
+  - 'Prometheus Workspace: ws-fed4cd88-e799-40f0-8522-12de7e30e6a6'
+2025-12-02 15:04:26,347 p=91138 u=luiz7 n=ansible | TASK [🔗 Adicionar Prometheus como Data Source] ***********************************************************************************
+2025-12-02 15:04:27,593 p=91138 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:04:27,604 p=91138 u=luiz7 n=ansible | TASK [✅ Data Source configurado] *************************************************************************************************
+2025-12-02 15:04:27,656 p=91138 u=luiz7 n=ansible | ok: [localhost] => 
+  msg: Datasource added
+2025-12-02 15:04:27,664 p=91138 u=luiz7 n=ansible | TASK [📊 Importar Dashboard - Node Exporter Full (ID 1860)] ***********************************************************************
+2025-12-02 15:04:28,683 p=91138 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:04:28,691 p=91138 u=luiz7 n=ansible | TASK [📊 Importar Dashboard - Kubernetes Cluster Monitoring (ID 15661)] ***********************************************************
+2025-12-02 15:04:29,695 p=91138 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:04:29,703 p=91138 u=luiz7 n=ansible | TASK [📊 Importar Dashboard - Prometheus Stats (ID 3662)] *************************************************************************
+2025-12-02 15:04:30,738 p=91138 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:04:30,746 p=91138 u=luiz7 n=ansible | TASK [📝 Resumo da Configuração] **************************************************************************************************
+2025-12-02 15:04:30,775 p=91138 u=luiz7 n=ansible | ok: [localhost] => 
+  msg:
+  - ======================================
+  - ✅ GRAFANA CONFIGURADO COM SUCESSO!
+  - ======================================
+  - ''
+  - "\U0001F310 Acesse: https://g-97013666db.grafana-workspace.us-east-1.amazonaws.com/"
+  - ''
+  - "\U0001F4CA Data Sources:"
+  - '   ✓ Amazon Managed Prometheus'
+  - ''
+  - "\U0001F4C8 Dashboards Importados:"
+  - '   ✓ Node Exporter Full'
+  - '   ✓ Kubernetes Cluster Monitoring'
+  - '   ✓ Prometheus Stats'
+  - ''
+  - "\U0001F50D Navegue em: Dashboards → Browse"
+  - ======================================
+2025-12-02 15:04:30,802 p=91138 u=luiz7 n=ansible | PLAY RECAP ************************************************************************************************************************
+2025-12-02 15:04:30,803 p=91138 u=luiz7 n=ansible | localhost                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-12-02 15:08:11,967 p=91927 u=luiz7 n=ansible | [DEPRECATION WARNING]: [defaults]collections_paths option, does not fit var naming standard, use the singular form 
+collections_path instead. This feature will be removed from ansible-core in version 2.19. Deprecation warnings can be disabled by 
+setting deprecation_warnings=False in ansible.cfg.
+2025-12-02 15:08:12,454 p=91927 u=luiz7 n=ansible | PLAY [Configurar Amazon Managed Grafana] ******************************************************************************************
+2025-12-02 15:08:12,464 p=91927 u=luiz7 n=ansible | TASK [Obter outputs do Terraform] *************************************************************************************************
+2025-12-02 15:08:18,611 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:18,614 p=91927 u=luiz7 n=ansible | TASK [Obter Grafana API Key] ******************************************************************************************************
+2025-12-02 15:08:24,586 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:24,588 p=91927 u=luiz7 n=ansible | TASK [Obter Prometheus Endpoint] **************************************************************************************************
+2025-12-02 15:08:38,381 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:38,383 p=91927 u=luiz7 n=ansible | TASK [Definir variáveis] **********************************************************************************************************
+2025-12-02 15:08:38,407 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:38,409 p=91927 u=luiz7 n=ansible | TASK [Validar outputs obtidos] ****************************************************************************************************
+2025-12-02 15:08:38,459 p=91927 u=luiz7 n=ansible | ok: [localhost] => changed=false 
+  msg: All assertions passed
+2025-12-02 15:08:38,461 p=91927 u=luiz7 n=ansible | TASK [Executar role de configuração do Grafana] ***********************************************************************************
+2025-12-02 15:08:38,488 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Validar variáveis necessárias] *****************************************************************************
+2025-12-02 15:08:38,519 p=91927 u=luiz7 n=ansible | ok: [localhost] => changed=false 
+  msg: All assertions passed
+2025-12-02 15:08:38,522 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Aguardar Grafana estar disponível] *************************************************************************
+2025-12-02 15:08:39,665 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:39,669 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Configurar Data Source Prometheus] *************************************************************************
+2025-12-02 15:08:40,728 p=91927 u=luiz7 n=ansible | changed: [localhost]
+2025-12-02 15:08:40,730 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Obter UID do Data Source] **********************************************************************************
+2025-12-02 15:08:41,742 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:41,744 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Obter Dashboard Node Exporter Full do Grafana.com] *********************************************************
+2025-12-02 15:08:42,819 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:42,856 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Importar Dashboard Node Exporter Full (ID 1860)] ***********************************************************
+2025-12-02 15:08:45,547 p=91927 u=luiz7 n=ansible | ok: [localhost]
+2025-12-02 15:08:45,580 p=91927 u=luiz7 n=ansible | TASK [grafana-config : Exibir resumo] *********************************************************************************************
+2025-12-02 15:08:45,606 p=91927 u=luiz7 n=ansible | ok: [localhost] => 
+  msg: "========================================\n✅ GRAFANA CONFIGURADO COM SUCESSO\n========================================\n\n\U0001F4CA Data Source: Prometheus\n\U0001F4C8 Dashboard 1860: Importado\n\U0001F310 URL: https://g-97013666db.grafana-workspace.us-east-1.amazonaws.com/\n\n========================================"
+2025-12-02 15:08:45,619 p=91927 u=luiz7 n=ansible | PLAY RECAP ************************************************************************************************************************
+2025-12-02 15:08:45,620 p=91927 u=luiz7 n=ansible | localhost                  : ok=12   changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
