@@ -287,9 +287,12 @@ aws sts get-caller-identity --profile terraform
 
 ## 🔧 Substituições Necessárias nos Arquivos
 
+> 🚨 **ATENÇÃO CRÍTICA:** Execute este passo **ANTES** de qualquer `terraform init/apply`!  
+> Caso contrário, o Terraform tentará usar recursos da conta AWS errada e falhará.
+
 ### 5.1. Substituir `<YOUR_ACCOUNT>` pelo seu Account ID
 
-**CRÍTICO:** Todos os arquivos `.tf` contêm o placeholder `<YOUR_ACCOUNT>` que **deve** ser substituído pelo ID da sua conta AWS.
+**⚠️ OBRIGATÓRIO:** Todos os arquivos `.tf` contêm o placeholder `<YOUR_ACCOUNT>` que **DEVE** ser substituído pelo ID da sua conta AWS **ANTES de executar qualquer comando Terraform**.
 
 #### **Obter seu Account ID:**
 
