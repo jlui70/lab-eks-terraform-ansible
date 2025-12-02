@@ -819,3 +819,136 @@ Este projeto demonstra a **superioridade da automação Ansible** sobre processo
 
 ---
 
+## 🤖 Scripts de Automação
+
+Este projeto inclui scripts para **deploy** e **destroy** completos da infraestrutura.
+
+### 🚀 rebuild-all.sh - Deploy Automatizado
+
+Recria toda a infraestrutura do zero automaticamente (Stacks 00 → 05).
+
+```bash
+./rebuild-all.sh
+```
+
+**O que o script faz:**
+1. ✅ Aplica todas as 6 stacks na ordem correta
+2. ✅ Aguarda S3 backend estar disponível (10s)
+3. ✅ Configura kubectl automaticamente
+4. ✅ Restaura `helm/values.yml` se necessário
+5. ✅ Substitui Account ID dinamicamente
+6. ✅ Opcionalmente cria deployment NGINX de teste
+
+**⏱️ Tempo total:** ~40-55 minutos
+
+**📋 Recursos criados:** 78 recursos (63 Terraform + 15 Kubernetes)
+
+---
+
+### 🗑️ destroy-all.sh - Destruição Completa ⚠️ IMPORTANTE
+
+**Destrói TODOS os recursos** na ordem reversa para **eliminar custos AWS**.
+
+```bash
+./destroy-all.sh
+```
+
+**⚠️ EXECUTE ESTE SCRIPT APÓS TERMINAR OS TESTES PARA EVITAR CUSTOS DIÁRIOS!**
+
+**O que o script faz automaticamente:**
+
+1. ✅ **Deleta recursos Kubernetes** (namespaces, Ingress → ALB)
+   - Namespace `ecommerce` (7 microserviços)
+   - Namespace `sample-app` (se existir)
+   - Helm releases órfãos
+   
+2. ✅ **Aguarda ALB ser deletado** (45s)
+
+3. ✅ **Destrói Stack 05** (Grafana + Prometheus)
+
+4. ✅ **Aguarda ENIs do Prometheus** serem liberadas (até 10 min)
+   - Prometheus Scraper cria ENIs gerenciadas
+   - AWS leva ~5 min para liberá-las após destroy
+
+5. ✅ **Destrói Stacks 04 → 03 → 02** (WAF, Karpenter, EKS)
+   - Remove recursos órfãos do Terraform state automaticamente
+   - Limpa helm releases órfãos
+
+6. ✅ **Limpa IAM Roles/Policies órfãs** (v3.3 - modo dinâmico)
+   - Lê nomes reais do Terraform state
+   - Funciona mesmo se você alterar `variables.tf`
+   - Previne erro "EntityAlreadyExists" em reinstalações
+   - Deleta instance profiles órfãos
+
+7. ✅ **Destrói Stack 01** (VPC + Subnets + NAT Gateways)
+
+8. ❓ **Pergunta sobre Stack 00** (Backend S3 + DynamoDB)
+   - Se destruir: remove state remoto completamente
+   - Se preservar: mantém histórico do Terraform
+
+**⏱️ Tempo total:** ~15-25 minutos
+
+**💰 Custo AWS após destroy:** **$0/mês** (se destruir backend também)
+
+---
+
+### ⚠️ AVISOS IMPORTANTES SOBRE CUSTOS
+
+| Cenário | Custo/mês | Ação Recomendada |
+|---------|-----------|------------------|
+| **Cluster rodando 24/7** | **~$273/mês** | ⚠️ **Destruir após testes!** |
+| **Cluster por 8 horas** | ~$8 | ✅ OK para estudo |
+| **Cluster por 2 horas** | ~$2 | ✅ OK para demonstração |
+| **Após destroy completo** | **$0/mês** | ✅ **EXECUTE destroy-all.sh!** |
+
+**🎯 LEMBRE-SE:** AWS cobra por hora. Se você esquecer o cluster rodando, **acumulará custos diários**.
+
+**Principais recursos que geram custo:**
+- 💰 **3x instâncias EC2 t3.medium** (~$73/mês)
+- 💰 **3x NAT Gateways** (~$97/mês) - o mais caro!
+- 💰 **EKS Cluster** (~$73/mês)
+- 💰 **Prometheus Scraper** (~$10/mês)
+- 💰 **Grafana Workspace** (~$9/mês)
+- 💰 **ALB** (~$18/mês)
+- 💰 **Transferência de dados** (variável)
+
+---
+
+### 🔄 Fluxo Completo: Deploy → Testes → Destroy
+
+```bash
+# 1. Deploy completo (40-55 min)
+./rebuild-all.sh
+
+# 2. Configurar SSO Grafana (5-10 min) - OBRIGATÓRIO
+# Via AWS Console → IAM Identity Center
+
+# 3. Configurar Grafana com Ansible (2 min)
+cd ansible
+ansible-playbook playbooks/01-configure-grafana.yml
+
+# 4. Deploy E-commerce App (opcional - 3 min)
+ansible-playbook playbooks/03-deploy-ecommerce.yml
+cd ..
+
+# 5. Testar tudo (30 min - 2 horas)
+kubectl get nodes
+kubectl get pods -A
+# Acessar Grafana, testar aplicação, validar métricas
+
+# 6. DESTRUIR TUDO (15-25 min) ⚠️ CRÍTICO!
+./destroy-all.sh
+# Responda "s" quando perguntar sobre backend
+
+# 7. Validar custos zerados
+aws eks list-clusters --profile terraform
+# Esperado: []
+
+aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --profile terraform
+# Esperado: nenhuma instância
+```
+
+**Custo total do teste:** ~$2 (se destruir após 2 horas)
+
+---
+
