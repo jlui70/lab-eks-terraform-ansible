@@ -1,6 +1,6 @@
-# EKS Express - Infraestrutura AWS Production Grade
+# Projeto EKS-TERRAFORM-AMSIBLE - Infraestrutura AWS Production Grade
 
-Infraestrutura completa para provisionar um **Cluster Amazon EKS production-grade** utilizando **Terraform**, com stacks modulares para gerenciamento de recursos AWS.
+Infraestrutura completa para provisionar um **Cluster Amazon EKS production-grade** utilizando **Terraform** e **Ansible** com stacks modulares para gerenciamento de recursos AWS.
 
 Este projeto inclui:
 - ✅ **EKS Cluster 1.32** com Node Groups gerenciados
@@ -10,13 +10,10 @@ Este projeto inclui:
 - ✅ **WAF** para proteção do Application Load Balancer
 - ✅ **Amazon Managed Prometheus + Grafana** para observabilidade
 - ✅ **6 stacks Terraform** modulares e reutilizáveis
+- ✅ **Ansible** Configuração de Serviços
 - ✅ **Scripts de automação** para deploy e destroy
 
 ---
-
-## 🆕 Novidade: Integração com Ansible
-
-Este projeto foi expandido com **documentação completa** para integração com **Ansible**, automatizando a configuração de serviços após o deployment Terraform.
 
 ### **📚 Documentação Ansible Disponível:**
 
@@ -38,22 +35,6 @@ Este projeto foi expandido com **documentação completa** para integração com
 | Deploy sample apps | 10 min (manual) | 1 min (automático) | **90%** |
 | Validação cluster | 15 min (manual) | 1 min (automático) | **93%** |
 | **3 ambientes completos** | **~10 horas** | **~2.5 horas** | **75%** |
-
-__name__="up", instance="10.0.0.100:61678", job="pod_exporter"}
-{__name__="up", instance="10.0.0.100:80", job="pod_exporter"}
-{__name__="up", instance="10.0.0.100:8162", job="pod_exporter"}
-{__name__="up", instance="10.0.0.100:9100", job="pod_exporter"}
-{__name__="up", instance="10.0.0.106:3003", job="pod_exporter"}
-{__name__="up", instance="10.0.0.107:53", job="pod_exporter"}
-{__name__="up", instance="10.0.0.107:9153", job="pod_exporter"}
-{__name__="up", instance="10.0.0.109:4000", job="pod_exporter"}
-{__name__="up", instance="10.0.0.110:8080", job="pod_exporter"}
-{__name__="up", instance="10.0.0.111:80", job="pod_exporter"}
-{__name__="up", instance="10.0.0.113:8080", job="pod_exporter"}
-{__name__="up", instance="10.0.0.113:8081", job="pod_exporter"}
-{__name__="up", instance="10.0.0.115:9090", job="pod_exporter"}
-{__name__="up", instance="10.0.0.116:10251", job="pod_exporter"}
-{__name__="up", instance="10.0.0.117:80", job="pod_exporter"}---
 
 ## 🚀 Fluxo de Deployment Recomendado
 
@@ -80,24 +61,17 @@ __name__="up", instance="10.0.0.100:61678", job="pod_exporter"}
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ FASE 3A: Ansible (2 min) - RECOMENDADO                         │
+│ FASE 3A: Ansible (2 min)                         │
 ├─────────────────────────────────────────────────────────────────┤
 │ ansible-playbook playbooks/01-configure-grafana.yml             │
 │   → ✅ Data Source Prometheus configurado automaticamente       │
 │   → ✅ Dashboard Node Exporter importado automaticamente        │
 └─────────────────────────────────────────────────────────────────┘
-                              OU
-┌─────────────────────────────────────────────────────────────────┐
-│ FASE 3B: Manual (10-15 min) - Alternativa                      │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Configurar Data Source Prometheus manualmente                │
-│ 2. Importar Dashboard 1860 manualmente                          │
-└─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ FASE 4: Deploy E-commerce App (OPCIONAL - Demonstração)        │
+│ FASE 4: Deploy E-commerce App                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│ Stack 06 - Aplicação real com 7 microserviços                  │
+│ Stack 06 - Aplicação real com 7 microserviços                   │
 │                                                                 │
 │ OPÇÃO A - Ansible (3 min): ⚡ 85% mais rápido                  │
 │   ansible-playbook playbooks/03-deploy-ecommerce.yml            │
@@ -109,7 +83,7 @@ __name__="up", instance="10.0.0.100:61678", job="pod_exporter"}
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ ✅ AMBIENTE PRONTO PARA USO + APLICAÇÃO DEMO                   │
+│ ✅ AMBIENTE PRONTO PARA USO + APLICAÇÃO                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -120,7 +94,7 @@ __name__="up", instance="10.0.0.100:61678", job="pod_exporter"}
 
 ---
 
-## 📋 Pré-requisitos
+## 📋 Pré-requisitos (Obrigatório)
 
 Antes de iniciar o deployment, certifique-se de ter:
 
@@ -140,207 +114,9 @@ Antes de iniciar o deployment, certifique-se de ter:
 > 
 > **💡 DICA:** Execute `terraform destroy` imediatamente após os testes para evitar cobranças contínuas. O custo de ~$280/mês mencionado abaixo é apenas se você mantiver a infraestrutura rodando 24/7.
 
----
+### **📚 Siga as orientações no Documento de Configuração Inicial abaixo:**
 
-## 🛠️ Configuração Inicial
-
-### 1. Criar IAM User para Terraform
-
-Crie um usuário IAM na sua conta AWS para realizar o deployment:
-
-**Atenção:** Substitua `<YOUR_USER>` pelo nome desejado (ex: `terraform-deploy`).
-
-```bash
-aws iam create-user --user-name <YOUR_USER>
-```
-
----
-
-### 2. Criar e Configurar a Role do Terraform
-
-Crie uma Role na sua conta AWS que será assumida pelo Terraform:
-
-**Atenção:** Substitua `<YOUR_ACCOUNT>` pelo ID da sua conta AWS e `<YOUR_USER>` pelo usuário criado no passo anterior.
-
-```bash
-aws iam create-role \
-    --role-name terraform-role \
-    --assume-role-policy-document '{
-        "Version": "2012-10-17",
-        "Statement": [{
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::<YOUR_ACCOUNT>:user/<YOUR_USER>"
-            },
-            "Action": "sts:AssumeRole",
-            "Condition": {
-                "StringEquals": {
-                    "sts:ExternalId": "3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a"
-                }
-            }
-        }]
-    }'
-```
-
-📌 **Observação:** O External ID `3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a` já está configurado em todos os arquivos do projeto. Você pode alterá-lo, mas precisará atualizar todos os arquivos `variables.tf`.
-
----
-
-### 3. Anexar Permissões Administrativas à Role
-
-```bash
-aws iam attach-role-policy \
-    --role-name terraform-role \
-    --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
-```
-
----
-
-### 4. Configurar AWS CLI Profile
-
-> ⚠️ **IMPORTANTE:** Se você **JÁ** tem AWS CLI configurado e funcionando, **PULE esta seção**!
-> 
-> Teste primeiro:
-> ```bash
-> aws sts get-caller-identity --profile terraform
-> ```
-> 
-> ✅ Se retornar sucesso com `assumed-role/terraform-role`, suas credenciais JÁ ESTÃO CORRETAS.  
-> ❌ **NÃO** execute os comandos abaixo, pois isso **sobrescreverá** sua configuração funcional!
->
-> Continue direto para a seção 5 (Substituições nos arquivos).
-
----
-
-#### 4.1. **PRIMEIRO:** Configure as credenciais do usuário IAM
-
-Você precisa das **Access Keys** do usuário IAM criado no passo 1.
-
-**Opção A - Se já tem Access Keys:**
-
-```bash
-aws configure --profile default
-# AWS Access Key ID: AKIA...
-# AWS Secret Access Key: ...
-# Default region name: us-east-1
-# Default output format: json
-```
-
-**Opção B - Se precisa criar Access Keys:**
-
-1. Via AWS Console:
-   ```
-   AWS Console → IAM → Users → <YOUR_USER> → Security credentials
-   → Create access key → CLI → Create
-   ```
-
-2. Ou via AWS CLI (se já está logado):
-   ```bash
-   aws iam create-access-key --user-name <YOUR_USER>
-   ```
-
-3. Anote o `AccessKeyId` e `SecretAccessKey` e configure:
-   ```bash
-   aws configure --profile default
-   ```
-
-**Teste as credenciais básicas:**
-
-```bash
-aws sts get-caller-identity --profile default
-# Deve retornar: UserId, Account, Arn do seu usuário IAM
-```
-
----
-
-#### 4.2. Configure o profile terraform (assume role)
-
-Agora configure o profile `terraform` que assume a role criada no passo 2:
-
-**Atenção:** Substitua `<YOUR_ACCOUNT>` pelo ID da sua conta AWS.
-
-```bash
-aws configure set role_arn arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role --profile terraform
-aws configure set source_profile default --profile terraform
-aws configure set external_id 3b94ec31-9d0d-4b22-9bce-72b6ab95fe1a --profile terraform
-aws configure set region us-east-1 --profile terraform
-```
-
-**Teste a configuração da role:**
-
-```bash
-aws sts get-caller-identity --profile terraform
-# Deve retornar: UserId com "AssumedRole", Account, Arn com "terraform-role"
-```
-
-**❌ Se aparecer erro "InvalidClientTokenId":**
-- Suas credenciais do profile `default` estão inválidas ou ausentes
-- Volte ao passo 4.1 e configure as Access Keys corretamente
-- Verifique: `cat ~/.aws/credentials` (deve ter [default] com keys)
-
-**❌ Se aparecer erro "Access Denied":**
-- A role `terraform-role` não foi criada (volte ao passo 2)
-- Ou o usuário IAM não tem permissão para assumir a role
-- Ou o External ID está incorreto
-
----
-
-## 🔧 Substituições Necessárias nos Arquivos
-
-> 🚨 **ATENÇÃO CRÍTICA:** Execute este passo **ANTES** de qualquer `terraform init/apply`!  
-> Caso contrário, o Terraform tentará usar recursos da conta AWS errada e falhará.
-
-### 5.1. Substituir `<YOUR_ACCOUNT>` pelo seu Account ID
-
-**⚠️ OBRIGATÓRIO:** Todos os arquivos `.tf` contêm o placeholder `<YOUR_ACCOUNT>` que **DEVE** ser substituído pelo ID da sua conta AWS **ANTES de executar qualquer comando Terraform**.
-
-#### **Obter seu Account ID:**
-
-```bash
-aws sts get-caller-identity --query Account --output text --profile terraform
-```
-
-Anote o número retornado (ex: `123456789012`).
-
-#### 🐧 **(WSL/Linux)**
-
-```bash
-find . -type f -name "*.tf" -exec sed -i \
-    's|<YOUR_ACCOUNT>|123456789012|g' {} +
-```
-
-#### 🍎 **(MacOS)**
-
-```bash
-find . -type f -name "*.tf" -exec sed -i '' \
-    's|<YOUR_ACCOUNT>|123456789012|g' {} +
-```
-
-> ⚠️ **ATENÇÃO:** Substitua `123456789012` pelo seu Account ID real obtido no comando acima.
-
-**O que será substituído:**
-- ✅ IAM Role ARN: `arn:aws:iam::<YOUR_ACCOUNT>:role/terraform-role`
-- ✅ Bucket S3: `eks-devopsproject-state-files-<YOUR_ACCOUNT>`
-- ✅ EKS Access entries (cluster admin)
-
-**Total:** 16 ocorrências em 10 arquivos `.tf`
-
----
-
-### 5.2. Verificar EKS Access Configuration (Automático)
-
-✅ **NENHUMA AÇÃO NECESSÁRIA!** O arquivo `02-eks-cluster/eks.cluster.access.tf` já está configurado corretamente para usar a `terraform-role`.
-
-O Terraform automaticamente:
-- Detecta seu Account ID via `data.aws_caller_identity`
-- Configura access entry para `arn:aws:iam::{ACCOUNT_ID}:role/terraform-role`
-- Garante permissões de Cluster Admin para kubectl funcionar
-
-> 💡 **Nota:** Se você encontrar erro `"the server has asked for the client to provide credentials"` ao usar kubectl, verifique se você está usando o profile correto:
-> ```bash
-> aws sts get-caller-identity --profile terraform
-> # Deve retornar AssumedRoleUser com terraform-role
-> ```
+**[CONFIGURAÇÃO-INICIAL.md](./docs/Configuração-inicial.md)** 
 
 ---
 
@@ -386,7 +162,6 @@ Crie um Cluster EKS com addons instalados.
 
 1. ✅ Substitua `<YOUR_ACCOUNT>` em todos os arquivos `.tf` (veja seção 5.1)
 2. ✅ EKS Access já está configurado automaticamente com terraform-role (veja seção 5.2)
-3. (Opcional) Ajuste quantidade de worker nodes em `variables.tf` se necessário
 
 ```bash
 cd ../02-eks-cluster
@@ -630,12 +405,14 @@ ansible-playbook playbooks/01-configure-grafana.yml
 
 ---
 
-#### Passo 6.3: Configurar DNS Personalizado (CNAME)
+#### Passo 6.3: Configurar DNS Personalizado (CNAME) (Opcional)
 
-Para acessar via **eks.devopsproject.com.br**, configure o DNS:
+O acesso a aplicação E-commerce já esta disponível via ALB, caso deseje acesso via DNS, siga exemplo abaixo: 
 
-1. Acesse painel DNS do Hostgator
-2. Obtenha o ALB URL do output do Ansible ou via:
+Neste Exemplo apenas como referência mostro como configurei um cname eks no meu domínio **devopsproject.com.br**, hospedado na Hostgator:
+
+1. Acessar painel DNS do Hostgator
+2. Obter o ALB URL do output do Ansible ou via:
    ```bash
    kubectl get ingress ecommerce-ingress -n ecommerce -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
    ```
@@ -705,7 +482,7 @@ aws wafv2 get-web-acl-for-resource \
 # Via ALB direto
 curl -I http://[ALB-URL]
 
-# Via DNS personalizado
+# Via DNS personalizado (Exemplo 6.3)
 curl -I http://eks.devopsproject.com.br
 # Esperado: HTTP/1.1 200 OK
 ```
@@ -784,41 +561,6 @@ aws logs tail aws-waf-logs-eks-devopsproject --follow --profile terraform
 - ✋ Configuração DNS CNAME no Hostgator (~2 min)
 
 **Tudo mais é automatizado:** Terraform + Ansible
-
----
-
-### 🎓 Valor Educacional: Por Que Ansible?
-
-Este projeto demonstra a **superioridade da automação Ansible** sobre processos manuais:
-
-**Deploy da Aplicação E-commerce + WAF:**
-
-| Métrica | Manual | Ansible | Ganho |
-|---------|--------|---------|-------|
-| **Tempo total** | 20-25 min | 3 min | **87% mais rápido** |
-| **Comandos** | ~15 kubectl | 1 comando | **93% redução** |
-| **Associação WAF** | Manual (5 min) | Automático | **100% auto** |
-| **Taxa de erro** | Alta (esquecimentos) | Zero (idempotente) | **100% confiável** |
-| **Validações** | Manual | Automáticas | **100% cobertura** |
-| **Documentação** | Separada | Auto-documentada | **Sempre atualizada** |
-
-**Configuração do Grafana:**
-
-| Métrica | Manual | Ansible | Ganho |
-|---------|--------|---------|-------|
-| **Tempo** | 10-15 min | 2 min | **80% mais rápido** |
-| **Clicks console** | ~20 clicks | 0 clicks | **100% automação** |
-| **Configuração data source** | Manual (erros comuns) | Automática (SigV4) | **Zero erros** |
-| **Import dashboards** | Manual (1 por vez) | Automático (batch) | **100% batch** |
-
-**Tempo Total do Projeto:**
-
-| | Manual | Terraform + Ansible | Ganho |
-|---|--------|---------------------|-------|
-| **Infraestrutura** | N/A | 42-50 min (Terraform) | Mesma base |
-| **Aplicação + WAF** | 20-25 min | 3 min (Ansible) | **87% economia** |
-| **Grafana** | 10-15 min | 2 min (Ansible) | **80% economia** |
-| **TOTAL** | 72-90 min | **47-55 min** | **~40% mais rápido** |
 
 ---
 
