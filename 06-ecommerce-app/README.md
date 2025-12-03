@@ -186,14 +186,6 @@ kubectl logs -l app=mongodb -n ecommerce
 kubectl get pv,pvc -n ecommerce
 ```
 
-## 📈 Próximos Passos
-
-1. **Configurar SSL/TLS**: Adicionar certificado SSL ao ALB
-2. **Implementar Autenticação**: JWT tokens para APIs
-3. **Add Redis Cache**: Para melhor performance
-4. **CI/CD Pipeline**: Deploy automático via GitOps
-5. **Advanced Monitoring**: Custom dashboards no Grafana
-
 ## 💰 Custos Adicionais
 
 A aplicação usa a infraestrutura existente, custos adicionais mínimos:
