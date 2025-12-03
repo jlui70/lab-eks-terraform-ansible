@@ -1,6 +1,15 @@
-# Projeto EKS-TERRAFORM-AMSIBLE - Infraestrutura AWS Production Grade
+# Projeto EKS-TERRAFORM-ANSIBLE - Infraestrutura AWS Production Grade
 
-Infraestrutura completa para provisionar um **Cluster Amazon EKS production-grade** utilizando **Terraform** e **Ansible** com stacks modulares para gerenciamento de recursos AWS.
+<p align="center">
+  <img src="https://img.shields.io/badge/IaC-Terraform-623CE4?style=for-the-badge&logo=terraform&logoColor=white" />
+  <img src="https://img.shields.io/badge/Automation-Ansible-EE0000?style=for-the-badge&logo=ansible&logoColor=white" />
+  <img src="https://img.shields.io/badge/Kubernetes-K8s-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
+  <img src="https://img.shields.io/badge/Cloud-AWS-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white" />
+</p>
+
+> Infraestrutura completa para provisionar um **Cluster Amazon EKS production-grade** utilizando **Terraform** e **Ansible** com stacks modulares para gerenciamento de recursos AWS.
+
+Este projeto apresenta uma proposta de implantação completa com Terraform + Ansible, a base do DevOps moderno. Dominar essas tecnologias pode elevar o seu nível profissional.
 
 Este projeto inclui:
 - ✅ **EKS Cluster 1.32** com Node Groups gerenciados
@@ -699,4 +708,53 @@ aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" -
 **Custo total do teste:** ~$2 (se destruir após 2 horas)
 
 ---
+
+## 🙏 Créditos
+
+Este projeto é um fork do trabalho original de **[Kenerry Serain](https://github.com/kenerry-serain)**, desenvolvido como material do curso **DevOps na Nuvem**.
+
+Agradecimentos especiais pela estrutura e conhecimento compartilhado que tornou este projeto possível.
+
+**Repositório Original:** [kenerry-serain (GitHub)](https://github.com/kenerry-serain)
+
+---
+
+## 📜 Licença
+
+Este projeto está sob licença MIT.
+
+---
+
+## 📞 Contato e Suporte
+
+### 🌐 Conecte-se Comigo
+
+- 📹 **YouTube:** [DevOps Project](https://www.youtube.com/@devops-project)
+- 💼 **Portfólio:** [devopsproject.com.br](https://devopsproject.com.br/)
+- 💻 **GitHub:** [@jlui70](https://github.com/jlui70)
+
+### 🌟 Gostou do Projeto?
+
+Se este projeto foi útil para você:
+
+- ⭐ Dê uma **estrela** no repositório
+- 🔄 **Compartilhe** com a comunidade
+- 📹 **Inscreva-se** no canal do YouTube
+- 🤝 **Contribua** com melhorias
+
+<div align="center">
+
+**🚀 Enterprise-grade infrastructure com Terraform e Ansible**
+
+[![Ansible](https://img.shields.io/badge/Automation-Ansible-EE0000?style=for-the-badge&logo=ansible)](https://www.ansible.com/)
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4?style=for-the-badge&logo=terraform)](https://www.terraform.io/)
+[![AWS](https://img.shields.io/badge/Cloud-AWS-FF9900?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
+
+</div>
+
+---
+
+<p align="center">
+  <strong>Desenvolvido com ❤️ para a comunidade brasileira de DevOps, SRE e Cloud Engineering</strong>
+</p>
 
