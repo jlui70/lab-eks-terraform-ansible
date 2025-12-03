@@ -576,7 +576,7 @@ Este projeto inclui scripts para **deploy** e **destroy** completos da infraestr
 Recria toda a infraestrutura do zero automaticamente (Stacks 00 → 05).
 
 ```bash
-./rebuild-all.sh
+scripts/rebuild-all.sh
 ```
 
 **O que o script faz:**
@@ -598,7 +598,7 @@ Recria toda a infraestrutura do zero automaticamente (Stacks 00 → 05).
 **Destrói TODOS os recursos** na ordem reversa para **eliminar custos AWS**.
 
 ```bash
-./destroy-all.sh
+scripts/destroy-all.sh
 ```
 
 **⚠️ EXECUTE ESTE SCRIPT APÓS TERMINAR OS TESTES PARA EVITAR CUSTOS DIÁRIOS!**
@@ -666,7 +666,7 @@ Recria toda a infraestrutura do zero automaticamente (Stacks 00 → 05).
 
 ```bash
 # 1. Deploy completo (40-55 min)
-./rebuild-all.sh
+scripts/rebuild-all.sh
 
 # 2. Configurar SSO Grafana (5-10 min) - OBRIGATÓRIO
 # Via AWS Console → IAM Identity Center
@@ -685,7 +685,7 @@ kubectl get pods -A
 # Acessar Grafana, testar aplicação, validar métricas
 
 # 6. DESTRUIR TUDO (15-25 min) ⚠️ CRÍTICO!
-./destroy-all.sh
+scripts/destroy-all.sh
 # Responda "s" quando perguntar sobre backend
 
 # 7. Validar custos zerados

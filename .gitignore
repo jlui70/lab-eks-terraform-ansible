@@ -52,6 +52,7 @@ terraform.rc
 
 # Documentation privada (local only)
 docs internos/
+scripts internos/
 RESUMO-VALIDACAO-GITHUB.md
 README copy.md
 *copy.md
