@@ -119,8 +119,11 @@ Antes de iniciar o deployment, certifique-se de ter:
 **[CONFIGURAÇÃO-INICIAL.md](./docs/Configuração-inicial.md)** 
 
 ---
+## Deploy ⚠️ **IMPORTANTE:**
 
-## 🚀 Sequência de Deploy
+## (Iniciei o Deploy apenas quando finalizar a Configuração Inicial)
+
+## 🚀 Sequência de Deploy 
 
 ### Stack 00 - Backend (S3 + DynamoDB)
 
