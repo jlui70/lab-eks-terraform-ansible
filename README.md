@@ -711,7 +711,7 @@ aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" -
 
 ## 🙏 Créditos
 
-Este projeto é um fork do trabalho original de **[Kenerry Serain](https://github.com/kenerry-serain)**, desenvolvido como material do curso **DevOps na Nuvem**.
+Este projeto é inspirado no trabalho original de **[Kenerry Serain](https://github.com/kenerry-serain)**, desenvolvido como material do curso **DevOps na Nuvem**.
 
 Agradecimentos especiais pela estrutura e conhecimento compartilhado que tornou este projeto possível.
 
